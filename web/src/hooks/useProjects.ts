@@ -19,6 +19,8 @@ interface ProjectsState {
   /** Exposed for diagnostics/tests; the UI never surfaces this to students. */
   feedMode: SeatFeedMode
   retry: () => void
+  /** Force-sync counts now (e.g. right after a booking attempt). */
+  refresh: () => void
 }
 
 export function useProjects(): ProjectsState {
@@ -129,5 +131,9 @@ export function useProjects(): ProjectsState {
     void fetchProjects()
   }, [fetchProjects])
 
-  return { projects, loading, error, feedMode, retry }
+  const refresh = useCallback(() => {
+    void fetchProjects()
+  }, [fetchProjects])
+
+  return { projects, loading, error, feedMode, retry, refresh }
 }
