@@ -23,9 +23,15 @@ export interface ProjectRow {
 }
 
 export interface Overview {
+  /** The live booking gate. `null` means the server couldn't read it, show "unknown". */
+  booking_open: boolean | null
   students: StudentRow[]
   projects: ProjectRow[]
   totals: { students: number; booked: number; unbooked: number; delivered: number }
+}
+
+export interface GateResult {
+  booking_open: boolean
 }
 
 export interface SendFailure {
@@ -54,7 +60,7 @@ export interface SheetResult {
 /** Every call resolves to one of these, `unauthorized` sends the UI back to the gate. */
 export type AdminResult<T> =
   | { ok: true; data: T }
-  | { ok: false; error: 'unauthorized' | 'not_found' | 'resend_failed' | 'sheet_failed' | 'not_configured' | 'network'; data?: T }
+  | { ok: false; error: 'unauthorized' | 'not_found' | 'resend_failed' | 'sheet_failed' | 'not_configured' | 'settings_failed' | 'network'; data?: T }
 
 interface RawResponse {
   ok?: boolean
@@ -89,7 +95,7 @@ async function call<T>(secret: string, body: Record<string, unknown>): Promise<A
 
   if (json.ok === true) return { ok: true, data: json as unknown as T }
 
-  const known = ['not_found', 'resend_failed', 'sheet_failed', 'not_configured', 'unauthorized'] as const
+  const known = ['not_found', 'resend_failed', 'sheet_failed', 'not_configured', 'settings_failed', 'unauthorized'] as const
   const match = known.find((k) => k === json.error)
   // send_code reports partial success with error: resend_failed, keep the payload.
   return { ok: false, error: match ?? 'network', data: json as unknown as T }
@@ -107,3 +113,7 @@ export const refreshStatuses = (secret: string) =>
   call<RefreshResult>(secret, { action: 'refresh_status' })
 
 export const syncSheet = (secret: string) => call<SheetResult>(secret, { action: 'sync_sheet' })
+
+/** Opens or closes booking for everyone. `book_project` reads the same row. */
+export const setBookingOpen = (secret: string, open: boolean) =>
+  call<GateResult>(secret, { action: 'set_booking_open', open })

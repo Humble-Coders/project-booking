@@ -14,13 +14,22 @@ Students never sign in. Before booking day you email each student a **personal 6
 code** from the dashboard. On booking day they open the site, pick a project, type their
 code, and the seat is theirs. The code *is* their identity.
 
-Three rules are enforced inside the database itself, the website cannot bend them, and
+**Booking only works when you switch it on.** Students can browse the site from the moment
+you share the link, but every booking attempt is refused until you press **Open booking now**
+on the dashboard. That is what lets you email the codes in the morning and start the race a
+few hours later, with nobody getting a head start because they checked their inbox early.
+
+Four rules are enforced inside the database itself, the website cannot bend them, and
 neither can anyone poking at it from a browser console:
 
+- **Booking is closed until you open it.** The check happens in the database before it even
+  looks at the code, so a student who edits the page to re-enable the button still gets
+  refused. It also fails safe: if anything goes wrong reading the setting, booking stays shut.
 - **10 seats per project.** The booking function locks the project row before counting, so
   if 15 students tap Confirm at the same instant, exactly 10 succeed and the rest get a
   clean "that seat just went".
-- **One booking per student**: enforced by a unique constraint.
+- **One booking per student**: enforced by a unique constraint, plus student emails are forced
+  to lowercase so the same address typed two ways can't become two students.
 - **Codes are stored hashed**: never in plain text. Resending a code overwrites the old one,
   so the newest email always wins and the previous code dies instantly.
 
@@ -106,12 +115,26 @@ Dashboard → **Refresh delivery statuses** (Resend takes a few seconds to repor
 | Failed | Resend rejected the send | usually the daily cap, retry tomorrow |
 
 ### 5. Booking day
-Students go to https://projects.humblecoders.in, pick a project, enter their code. Seat
-counts update live for everyone watching. Nothing is needed from you, **no emails are sent
-on booking day**, so the daily cap is irrelevant here.
 
-Keep the dashboard open if you like: it refreshes itself every minute, and the projects
-panel shows exactly who booked what.
+**Before the day:** share the site link whenever you like. With booking closed, students can
+read all 25 projects and shortlist favourites, and every Book button says "Booking opens soon".
+
+**On the morning:** send the codes (step 3), give it the two or three hours you want, then on
+the dashboard press **Open booking now** and confirm. Every student sitting on the page sees
+the buttons go live within a second or two, no refresh needed, so nobody wins on page-refresh
+luck. Students who arrive later just find it open.
+
+From there they pick a project, enter their code, and the seat is theirs. Seat counts update
+live for everyone watching. **No emails are sent on booking day**, so the daily cap is
+irrelevant here.
+
+Keep the dashboard open if you like: it refreshes itself every minute, the card at the top
+always shows whether booking is OPEN or CLOSED, and the projects panel shows exactly who
+booked what.
+
+**Closing booking** (optional) is the same button. Bookings already made are kept, students
+can still browse, and new attempts are refused. Useful if you want a hard stop at a deadline
+or need to pause while you sort something out.
 
 ### 6. "I never got my code" / "I lost it"
 Find the student (search box) → **Resend** on their row. They get a fresh code immediately;
@@ -140,8 +163,19 @@ Lowering it below the number already booked doesn't cancel anyone; it just block
 **Never edit `seat_counts` by hand.** It is maintained automatically from `bookings`; editing it
 directly makes the live counts wrong until the next booking corrects them.
 
+**Open or close booking**, use the dashboard button. If you ever need it without the dashboard,
+Table Editor → `settings` → set `booking_open` on the single row (id 1). Nothing else reads it.
+
+**"Students say the Book button is dead."** Check the card at the top of the dashboard. If it
+says CLOSED, that is the whole answer.
+
+**Add a student by hand**, type the email in **lowercase**. The database rejects anything else
+on purpose: `Foo@x.com` and `foo@x.com` would otherwise be two different students, and that one
+person could book two projects.
+
 **Reset for a new semester**, in the Supabase SQL editor:
 ```sql
+update settings set booking_open = false where id = 1;   -- shut the gate first
 delete from bookings;                 -- frees every seat
 update students set code_hash = null, code_sent_at = null,
        resend_email_id = null, delivery_status = 'none';   -- retires all codes

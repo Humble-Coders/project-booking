@@ -49,11 +49,65 @@ create table if not exists public.bookings (
 
 create index if not exists bookings_project_idx on public.bookings (project_id);
 
+-- ---------- Student email normalisation ----------
+-- students.email is both the primary key and the identity a booking hangs off,
+-- so two casings of one address were two students, i.e. two bookings for one
+-- human. Lowercase (and trimmed) at rest closes that for good. Existing rows are
+-- repaired first; a genuine case clash is never merged automatically, it stops
+-- the script and names the addresses for the instructor to resolve by hand.
+
+do $$
+declare v_clashes text;
+begin
+  select string_agg(e, ', ') into v_clashes
+  from (
+    select lower(btrim(email)) as e
+    from public.students
+    group by lower(btrim(email))
+    having count(*) > 1
+  ) d;
+  if v_clashes is not null then
+    raise exception
+      'Student emails clash by case or whitespace: %. Merge them by hand (keep the row holding the booking, delete the other), then re-run this script.',
+      v_clashes;
+  end if;
+end $$;
+
+-- Lowercasing a primary key has to carry its bookings with it, and fixing a
+-- typo'd address later should move the booking too, so the FK cascades.
+alter table public.bookings drop constraint if exists bookings_email_fkey;
+alter table public.bookings
+  add constraint bookings_email_fkey
+  foreign key (email) references public.students (email) on update cascade;
+
+update public.students
+   set email = lower(btrim(email))
+ where email <> lower(btrim(email));
+
+do $$ begin
+  alter table public.students
+    add constraint students_email_lowercase check (email = lower(btrim(email)));
+exception when duplicate_object then null;
+end $$;
+
 -- Realtime seat feed: aggregate integers only, maintained by trigger below.
 create table if not exists public.seat_counts (
   project_id int primary key references public.projects (id),
   booked     int not null default 0
 );
+
+-- The booking gate: one row, flipped by the instructor from the dashboard.
+-- Browsing the catalogue is always open; booking is refused until this is true.
+-- Defaults to false so a fresh (or restored) database is never accidentally open.
+create table if not exists public.settings (
+  id           int primary key,
+  booking_open boolean not null default false,
+  updated_at   timestamptz not null default now(),
+  constraint settings_singleton check (id = 1)
+);
+
+insert into public.settings (id, booking_open) values (1, false)
+on conflict (id) do nothing;
 
 -- v1 leftover: codes are per-student now, not per-booking.
 drop table if exists public.otps;
@@ -88,13 +142,15 @@ create trigger bookings_seat_count
 -- ---------- Lock everything down ----------
 -- RLS on with ZERO policies on students/projects/bookings: the anon key
 -- reads/writes nothing directly. The only doors in are the two functions
--- below. Single exception: anon may SELECT seat_counts (two integers per
--- project) to power Realtime.
+-- below. Two read-only exceptions, both realtime feeds carrying no personal
+-- data: seat_counts (two integers per project) and settings (one boolean).
+-- Neither has an INSERT/UPDATE/DELETE policy, so anon can look and nothing more.
 
 alter table public.students    enable row level security;
 alter table public.projects    enable row level security;
 alter table public.bookings    enable row level security;
 alter table public.seat_counts enable row level security;
+alter table public.settings    enable row level security;
 
 drop policy if exists seat_counts_public_read on public.seat_counts;
 create policy seat_counts_public_read
@@ -102,11 +158,24 @@ create policy seat_counts_public_read
   to anon, authenticated
   using (true);
 
--- Realtime: publish seat_counts changes; FULL identity so UPDATE events
--- carry the row values.
+drop policy if exists settings_public_read on public.settings;
+create policy settings_public_read
+  on public.settings for select
+  to anon, authenticated
+  using (true);
+
+-- Realtime: publish seat_counts + settings changes; FULL identity so UPDATE
+-- events carry the row values. The settings feed is what makes "booking is
+-- open" land in every open browser within a second or so of the instructor
+-- flipping it, instead of whenever each client next polls.
 alter table public.seat_counts replica identity full;
+alter table public.settings    replica identity full;
 do $$ begin
   alter publication supabase_realtime add table public.seat_counts;
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.settings;
 exception when duplicate_object then null;
 end $$;
 
@@ -137,7 +206,7 @@ $$;
 -- "for update" on the project row serializes all bookings for that project,
 -- so the seat-count check is exact, first 10 win, the rest get 'full'.
 -- Error contract (fixed, see CLAUDE.md):
---   invalid_code | already_booked (+project) | no_project | full
+--   not_open | invalid_code | already_booked (+project) | no_project | full
 --   success: ok + email + project
 
 drop function if exists public.book_project(text, text, int);
@@ -156,6 +225,14 @@ declare
   v_taken    int;
   v_existing text;
 begin
+  -- 0. The instructor's gate, checked before anything else. While booking is
+  -- closed no student lookup happens at all, so a closed system cannot be used
+  -- to probe which codes are valid: every attempt gets the same not_open.
+  -- A missing settings row counts as closed, never as open.
+  if not coalesce((select booking_open from settings where id = 1), false) then
+    return jsonb_build_object('ok', false, 'error', 'not_open');
+  end if;
+
   -- 1. The code identifies the student
   select * into v_student from students where code_hash = v_hash;
   if not found then

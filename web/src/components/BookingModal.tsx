@@ -125,6 +125,14 @@ function ResultView({
   }
 
   const view = {
+    // Reachable if the instructor closes booking between the page loading and
+    // Confirm being pressed, or if someone re-enables the button by hand.
+    not_open: {
+      icon: '●',
+      tone: 'bad',
+      title: "Booking isn't open yet",
+      body: "Your instructor hasn't opened booking. Nothing was booked, and no seat was taken from anyone. Leave this page open, it unlocks by itself the moment booking starts.",
+    },
     invalid_code: {
       icon: '✕',
       tone: 'bad',

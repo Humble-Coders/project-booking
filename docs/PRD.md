@@ -61,10 +61,11 @@ flowchart LR
 
 | Table | Columns | Notes |
 |---|---|---|
-| `students` | `email` PK, `code_hash` **unique**, `code_sent_at`, `resend_email_id`, `delivery_status` (`none`/`sent`/`delivered`/`bounced`/`failed`), `added_at` | One active code per student; hash only, never plaintext. Upserted from the Google Sheet |
+| `students` | `email` PK (**lowercase-only**, DB check constraint), `code_hash` **unique**, `code_sent_at`, `resend_email_id`, `delivery_status` (`none`/`sent`/`delivered`/`bounced`/`failed`), `added_at` | One active code per student; hash only, never plaintext. Upserted from the Google Sheet. The lowercase constraint is what stops two casings of one address becoming two students, and therefore two bookings for one person |
 | `projects` | `id` PK, `title`, `description`, `api_name`, `api_url`, `api_note`, `capacity` (default 10) | Seeded with the 25 ideas |
 | `bookings` | `id`, `email` **unique** FK→students, `project_id` FK→projects, `booked_at` | Unique email = one booking per student |
-| `seat_counts` | `project_id` PK, `booked` int | Maintained by trigger on `bookings`; the **only** table with an anon SELECT policy (aggregate numbers only), powers Supabase Realtime |
+| `seat_counts` | `project_id` PK, `booked` int | Maintained by trigger on `bookings`; anon SELECT policy (aggregate numbers only), powers Supabase Realtime |
+| `settings` | `id` PK (always 1), `booking_open` bool, `updated_at` | The booking gate. Anon SELECT + Realtime so the instructor's flip reaches every open browser in ~1 s. Defaults to **false**; only `set_booking_open` writes it |
 
 The v1 `otps` table is gone, codes are persistent per student, not per-booking.
 
@@ -73,9 +74,12 @@ The v1 `otps` table is gone, codes are persistent per student, not per-booking.
 - Generated only by the admin `send_code` action; stored as SHA-256 hash; emailed via Resend.
 - **Resend = replace**: generating a new code overwrites `code_hash`, so the newest emailed code always works and the previous one instantly stops working.
 
+### Booking gate (when booking is open)
+Browsing is open from the moment the site is shared. **Booking is refused until the instructor turns it on**, so codes can be emailed hours ahead without anyone getting a head start. The gate is one boolean in `settings`, flipped from the dashboard, and `book_project` checks it **before** it looks up the code, so a closed system does no work and reveals nothing about which codes are valid. It fails closed: a missing or unreadable row counts as closed, and re-running `schema.sql` never reopens it. The catalogue subscribes to the same row over Realtime, so the Book buttons unlock for every waiting browser within about a second of the flip, with no refresh and no 45-second polling lottery deciding who gets to click first.
+
 ### Security model (no auth, still safe)
-- **RLS on with zero policies** on `students`, `projects`, `bookings` → anon key reads/writes nothing directly. `seat_counts` alone has an anon SELECT policy (safe: two integers per project).
-- Public API surface is exactly: `get_projects()`, `book_project(code, project_id)` (both `SECURITY DEFINER`), and the realtime subscription on `seat_counts`.
+- **RLS on with zero policies** on `students`, `projects`, `bookings` → anon key reads/writes nothing directly. Two read-only exceptions, both Realtime feeds with no personal data: `seat_counts` (two integers per project) and `settings` (one boolean).
+- Public API surface is exactly: `get_projects()`, `book_project(code, project_id)` (both `SECURITY DEFINER`), and the realtime subscriptions on `seat_counts` + `settings`.
 - Admin surface is one edge function requiring the `ADMIN_SECRET` header; the dashboard route holds no privileged logic itself.
 - A booking requires a valid code → possession of the student's inbox at distribution time; codes are revocable by resend.
 
@@ -94,8 +98,8 @@ sequenceDiagram
     St->>P: browse freely (realtime seats)
     St->>P: pick project, enter code
     P->>DB: rpc book_project(code, project_id)
-    DB->>DB: hash → find student → not booked? → lock project row → count < 10 → insert
-    DB-->>P: ok + student email + project | invalid_code | already_booked | full
+    DB->>DB: booking open? → hash → find student → not booked? → lock project row → count < 10 → insert
+    DB-->>P: ok + student email + project | not_open | invalid_code | already_booked | full
     DB--)P: seat_counts realtime tick to all open browsers
 ```
 
@@ -107,15 +111,18 @@ sequenceDiagram
 - **Seat counts update in realtime** via Supabase Realtime on `seat_counts` (no refresh needed while students race); polling fallback (~45 s) if the channel drops.
 - Fully responsive; works down to 375 px.
 
+- **While booking is closed:** every Book button reads "Booking opens soon" and is disabled, and a banner explains that the page unlocks itself when the instructor opens booking. Browsing, seat counts and API links are untouched. This is presentation only, the database is the gate.
+
 ### 5.2 Booking modal (code-only)
 - **Step 1:** the only input, the student's personal code (6 chars, auto-uppercase) → "Confirm Booking" → `rpc book_project`.
 - **Step 2 (result):** success shows **who they are** (their email) + the booked project; errors map to friendly copy:
-  `invalid_code` ("check the code from your email, or ask your instructor to resend") · `already_booked` (+which project they hold) · `full` (seat just taken, counts refresh) · `no_project`.
+  `not_open` (booking hasn't started, nothing was booked) · `invalid_code` ("check the code from your email, or ask your instructor to resend") · `already_booked` (+which project they hold) · `full` (seat just taken, counts refresh) · `no_project`.
 - Cosmetic "You've booked X" banner from localStorage (server state is the truth).
 
 ### 5.3 Admin dashboard (`/admin`, very basic, one page)
 - Gate: admin secret entered once (kept in localStorage), sent as `x-admin-secret` header to the `admin` edge function. Wrong secret → locked out message.
 - **Students table:** email · booked project (or,) · code sent at · **delivery status chip** (none/sent/delivered/bounced/failed) · per-row **Send / Resend code** button.
+- **Booking gate control (top of the toolbar):** a status card reading **Booking is OPEN / CLOSED** with one button to flip it, behind a confirm dialog. An unreadable gate shows "unknown" and hides the button rather than guessing. This is the single most consequential control on the page and is placed accordingly.
 - **Toolbar:** "Send codes to all pending" (students with no code yet) · "Refresh delivery statuses" (polls Resend per tracked email id) · "Sync sheet" · live totals (booked / unbooked / codes delivered).
 - **Projects summary:** per project, seats taken + the booked students' emails.
 - Resend semantics (the "new code always works" rule): every send generates a fresh unique code, overwrites the hash, emails it, records the new Resend id with status `sent`.
@@ -139,9 +146,9 @@ Seeded in `supabase/schema.sql`; canonical list with descriptions + API links (a
 - **Dependency:** Resend requires `humblecoders.in` domain verification (DNS) before student emails deliver.
 
 ## 7. Open Decisions
-1. **Resend daily cap at distribution time**, 100 emails/day free; ~250 students means splitting the initial code blast over 3 days or a one-time upgrade. Recommendation: batch by class section.
-2. **Booking window**, no open/close date logic in v1. If wanted later: an `opens_at/closes_at` check inside `book_project`.
-3. **Realtime 200-connection cap on booking day**, with ~250 simultaneous browsers, ~50 clients will silently fall back to 15 s polling (correctness unaffected; their counts just lag). Acceptable as-is; alternatives if the manager wants everyone live: one month of Supabase Pro (500 connections, $25) for booking day, or stagger booking by batch (pairs well with the Resend batching in decision #1).
+1. **Resend daily cap at distribution time**, 100 emails/day free. At the current roster size (~50) a single "send to all pending" run fits comfortably inside one day's allowance; the batching advice only applies if the roster grows past ~100.
+2. ~~**Booking window**~~ **Resolved:** an instructor-controlled gate, not a schedule. See "Booking gate" in §4 and decision #15. A timed `opens_at/closes_at` remains possible later, but a manual switch matches how the day actually runs (codes go out, then booking opens once the instructor is satisfied everyone has theirs).
+3. **Realtime 200-connection cap on booking day**, with ~250 simultaneous browsers, ~50 clients would silently fall back to 15 s polling (correctness unaffected; their counts just lag). Not reachable at the current ~50-student roster. Alternatives if the roster grows: one month of Supabase Pro (500 connections, $25) for booking day, or stagger booking by batch.
 
 ## 8. Decision Log
 
@@ -161,6 +168,8 @@ Seeded in `supabase/schema.sql`; canonical list with descriptions + API links (a
 | 12 | Delivery monitoring | Dashboard polls Resend per email id (no webhooks in v1) |
 | 13 | Realtime seats | Supabase Realtime on trigger-maintained `seat_counts` (the only anon-readable table); polling fallback |
 | 14 | Dashboard gate | Single `ADMIN_SECRET` header checked by the `admin` edge function; no user accounts |
+| 15 | Booking gate | **Instructor-controlled on/off switch**, not a scheduled time. Enforced in `book_project` before the code lookup, defaults closed, fails closed. Browsing is never gated (2026-08-18) |
+| 16 | Student email identity | Lowercase enforced by a DB check constraint on `students.email`, so one address cannot become two students and therefore two bookings (2026-08-18) |
 
 ---
 

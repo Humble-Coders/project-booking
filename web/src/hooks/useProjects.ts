@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import type { Project, SeatCountRow, SeatFeedMode } from '../lib/types'
+import type { Project, SeatCountRow, SeatFeedMode, SettingsRow } from '../lib/types'
 
 // Polling cadence (PRD §6): lazy safety net while realtime is healthy; tight
 // with jitter when it isn't (free plan caps realtime at 200 connections, // rejected clients must degrade silently, not stampede in sync).
@@ -15,6 +15,12 @@ interface ProjectsState {
   loading: boolean
   /** True only when we have nothing at all to show (initial load failed). */
   error: boolean
+  /**
+   * The instructor's gate. Display only, `book_project` checks the same row
+   * server-side on every attempt, so a student who forces the button on gets
+   * `not_open` from the database rather than a seat.
+   */
+  bookingOpen: boolean
   /** Exposed for diagnostics/tests; the UI never surfaces this to students. */
   feedMode: SeatFeedMode
   retry: () => void
@@ -26,6 +32,7 @@ export function useProjects(): ProjectsState {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [bookingOpen, setBookingOpen] = useState(false)
   const [feedMode, setFeedMode] = useState<SeatFeedMode>('polling')
 
   const feedModeRef = useRef<SeatFeedMode>('polling')
@@ -39,16 +46,24 @@ export function useProjects(): ProjectsState {
     setFeedMode(mode)
   }, [])
 
-  const fetchProjects = useCallback(async () => {
-    const { data, error: rpcError } = await supabase.rpc('get_projects')
-    if (rpcError || !Array.isArray(data)) {
+  const fetchState = useCallback(async () => {
+    const [catalogue, gate] = await Promise.all([
+      supabase.rpc('get_projects'),
+      supabase.from('settings').select('booking_open').eq('id', 1).maybeSingle(),
+    ])
+
+    // The gate is its own story: a failed read keeps the last known state
+    // rather than flipping the whole page shut on one bad request.
+    if (!gate.error && gate.data) setBookingOpen(gate.data.booking_open === true)
+
+    if (catalogue.error || !Array.isArray(catalogue.data)) {
       // Keep showing the last known data; only the initial load may error the UI.
       if (!hasDataRef.current) setError(true)
       return
     }
     hasDataRef.current = true
     setError(false)
-    setProjects(data as Project[])
+    setProjects(catalogue.data as Project[])
     setLoading(false)
   }, [])
 
@@ -60,9 +75,9 @@ export function useProjects(): ProjectsState {
         ? POLL_REALTIME_OK_MS
         : POLL_FALLBACK_MS + Math.random() * FALLBACK_JITTER_MS
     pollTimer.current = setTimeout(() => {
-      void fetchProjects().finally(schedulePoll)
+      void fetchState().finally(schedulePoll)
     }, delay)
-  }, [fetchProjects])
+  }, [fetchState])
 
   const applySeatEvent = useCallback((row: SeatCountRow) => {
     setProjects((prev) =>
@@ -90,6 +105,16 @@ export function useProjects(): ProjectsState {
             if ('project_id' in payload.new) applySeatEvent(payload.new)
           },
         )
+        // Same socket, second listener: the instructor opening booking reaches
+        // every waiting browser in about a second, so nobody gets a head start
+        // just because their poll happened to land first.
+        .on<SettingsRow>(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'settings' },
+          (payload) => {
+            if ('booking_open' in payload.new) setBookingOpen(payload.new.booking_open === true)
+          },
+        )
         .subscribe((status) => {
           // A replaced channel fires CLOSED on removal, only the current
           // channel may drive mode changes and rejoin scheduling.
@@ -97,8 +122,8 @@ export function useProjects(): ProjectsState {
           if (status === 'SUBSCRIBED') {
             if (rejoinTimer.current) clearTimeout(rejoinTimer.current)
             setMode('realtime')
-            // Counts may have moved while we were away from the socket.
-            void fetchProjects()
+            // Counts and the gate may have moved while we were off the socket.
+            void fetchState()
             schedulePoll()
           } else {
             // CHANNEL_ERROR, TIMED_OUT, CLOSED, too_many_connections, all the
@@ -112,7 +137,7 @@ export function useProjects(): ProjectsState {
       channelRef.current = channel
     }
 
-    void fetchProjects()
+    void fetchState()
     schedulePoll()
     joinRealtime()
 
@@ -122,17 +147,17 @@ export function useProjects(): ProjectsState {
       if (rejoinTimer.current) clearTimeout(rejoinTimer.current)
       if (channelRef.current) void supabase.removeChannel(channelRef.current)
     }
-  }, [applySeatEvent, fetchProjects, schedulePoll, setMode])
+  }, [applySeatEvent, fetchState, schedulePoll, setMode])
 
   const retry = useCallback(() => {
     setError(false)
     setLoading(true)
-    void fetchProjects()
-  }, [fetchProjects])
+    void fetchState()
+  }, [fetchState])
 
   const refresh = useCallback(() => {
-    void fetchProjects()
-  }, [fetchProjects])
+    void fetchState()
+  }, [fetchState])
 
-  return { projects, loading, error, feedMode, retry, refresh }
+  return { projects, loading, error, bookingOpen, feedMode, retry, refresh }
 }
