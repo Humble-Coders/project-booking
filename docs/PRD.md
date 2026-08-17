@@ -39,11 +39,11 @@ There is no in-product admin role; safety comes from the database only exposing 
 
 ## 4. System Architecture
 
-**Stack (locked):** static single-file `index.html` (no framework, no build step) + **Supabase free tier** (Postgres, RLS, Edge Functions) + **Resend** (OTP emails) + **Google Sheet published as CSV** (registered-email source of truth).
+**Stack (locked):** **Vite + React + TypeScript + Tailwind CSS** single-page app (static build, deployed at `projects.humblecoders.in`) + **Supabase free tier** (Postgres, RLS, Edge Functions) + **Resend** (OTP emails) + **Google Sheet published as CSV** (registered-email source of truth). A vanilla-JS prototype exists at `project-booking/index.html` as the behaviour/design baseline.
 
 ```mermaid
 flowchart LR
-    S[Student browser\nindex.html] -->|rpc get_projects| DB[(Postgres\nRLS locked)]
+    S[Student browser\nReact SPA] -->|rpc get_projects| DB[(Postgres\nRLS locked)]
     S -->|POST send-otp| F1[Edge Fn: send-otp]
     S -->|rpc book_project| DB
     F1 -->|verify registered\nstore hashed OTP| DB
@@ -78,7 +78,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     participant St as Student
-    participant P as index.html
+    participant P as React SPA
     participant F as send-otp (Edge Fn)
     participant DB as Postgres
     St->>P: pick project, enter email
@@ -116,15 +116,15 @@ Seeded in `supabase/schema.sql`; canonical list with descriptions + API links (a
 ## 6. Non-Functional Requirements
 - **Correctness over everything:** seat caps and one-per-student are DB-enforced; the UI is never the enforcement layer.
 - **Scale:** one classroom (~250 students, burst on booking day). Free tiers suffice: Supabase free, Resend 100 emails/day (watch this on booking day — see Open Decisions).
-- **Zero build step:** `index.html` stays a single self-contained file, hostable anywhere.
+- **Static output:** the Vite build produces plain static files — no server-side rendering, hostable on any static host behind `projects.humblecoders.in`.
+- **Responsive on all devices** (375 px phone / 768 px tablet / desktop) is an acceptance criterion for every UI ticket.
 - **Secrets** (`RESEND_API_KEY`, `SHEET_CSV_URL`, `SYNC_SECRET`, `FROM_EMAIL`) live only in Supabase edge-function secrets. The anon key is public by design; safety = RLS + the two-function surface.
 - **Dependency:** Resend requires `humblecoders.in` domain verification (DNS) before student emails deliver.
 
 ## 7. Open Decisions
-1. **Hosting** — subdomain (`projects.humblecoders.in`) vs Netlify/Vercel drop. Recommendation: subdomain for brand trust in the OTP email + URL.
-2. **Resend daily cap** — 100 emails/day free. ~250 students racing on day one could exceed it (each attempt = 1 email). Recommendation: stagger booking opening by batch, or one-time upgrade for booking day.
-3. **Booking window** — no open/close date logic in v1. If wanted later: an `opens_at/closes_at` check inside `book_project`.
-4. **GitHub repo** — pipeline needs the remote created under the Humble-Coders org (name + visibility TBD by manager).
+1. **Resend daily cap** — 100 emails/day free. ~250 students racing on day one could exceed it (each attempt = 1 email). Recommendation: stagger booking opening by batch, or one-time upgrade for booking day.
+2. **Booking window** — no open/close date logic in v1. If wanted later: an `opens_at/closes_at` check inside `book_project`.
+3. **GitHub repo** — pipeline needs the remote created under the Humble-Coders org (name + visibility TBD by manager).
 
 ## 8. Decision Log
 
