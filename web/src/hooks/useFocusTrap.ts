@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
 
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
 
@@ -8,6 +8,12 @@ const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href], [tabi
  * focused element on unmount.
  */
 export function useFocusTrap(container: RefObject<HTMLElement | null>, onEscape: () => void) {
+  // Held in a ref so a changing callback identity (e.g. a `pending` flip in the
+  // caller) can't re-run the effect — a re-run would capture a modal-internal
+  // element as "previously focused" and lose the real trigger on close.
+  const escapeRef = useRef(onEscape)
+  escapeRef.current = onEscape
+
   useEffect(() => {
     const node = container.current
     if (!node) return
@@ -18,7 +24,7 @@ export function useFocusTrap(container: RefObject<HTMLElement | null>, onEscape:
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onEscape()
+        escapeRef.current()
         return
       }
       if (e.key !== 'Tab') return
@@ -40,5 +46,5 @@ export function useFocusTrap(container: RefObject<HTMLElement | null>, onEscape:
       document.removeEventListener('keydown', onKeyDown)
       previouslyFocused?.focus()
     }
-  }, [container, onEscape])
+  }, [container])
 }
