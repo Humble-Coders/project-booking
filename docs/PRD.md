@@ -131,6 +131,7 @@ Seeded in `supabase/schema.sql`; canonical list with descriptions + API links (a
 ## 6. Non-Functional Requirements
 - **Correctness over everything:** seat caps and one-per-student are DB-enforced; the UI is never the enforcement layer.
 - **Scale:** one classroom (~250 students, burst on booking day). Booking day itself sends **zero email** (codes distributed beforehand) — the Resend 100/day free cap only constrains distribution day (see Open Decisions).
+- **Realtime connection cap:** Supabase free plan allows **200 concurrent realtime connections** (excess clients get `too_many_connections`). Realtime is display-only garnish — booking correctness never depends on it (RPCs are plain HTTPS + the Postgres lock). The frontend must treat connection rejection exactly like a dropped channel: fall back to polling, tightened to ~15 s (with jitter) whenever realtime is unavailable. See Open Decisions for the paid bump option.
 - **Static output:** the Vite build produces plain static files — no server-side rendering, hostable on any static host behind `projects.humblecoders.in`.
 - **Responsive on all devices** (375 px phone / 768 px tablet / desktop) is an acceptance criterion for every UI ticket.
 - **Secrets** (`RESEND_API_KEY`, `SHEET_CSV_URL`, `SYNC_SECRET`, `ADMIN_SECRET`, `FROM_EMAIL`) live only in Supabase edge-function secrets. The anon key is public by design; safety = RLS + the two-function public surface.
@@ -140,6 +141,7 @@ Seeded in `supabase/schema.sql`; canonical list with descriptions + API links (a
 ## 7. Open Decisions
 1. **Resend daily cap at distribution time** — 100 emails/day free; ~250 students means splitting the initial code blast over 3 days or a one-time upgrade. Recommendation: batch by class section.
 2. **Booking window** — no open/close date logic in v1. If wanted later: an `opens_at/closes_at` check inside `book_project`.
+3. **Realtime 200-connection cap on booking day** — with ~250 simultaneous browsers, ~50 clients will silently fall back to 15 s polling (correctness unaffected; their counts just lag). Acceptable as-is; alternatives if the manager wants everyone live: one month of Supabase Pro (500 connections, $25) for booking day, or stagger booking by batch (pairs well with the Resend batching in decision #1).
 
 ## 8. Decision Log
 
