@@ -16,7 +16,7 @@
 //   node scripts/concurrency-test.mjs [project_id]
 //
 // project_id defaults to 25; pick any project with 0 real
-// bookings — the test needs all 10 seats free.
+// bookings, the test needs all 10 seats free.
 // ============================================================
 
 import { createHash } from 'node:crypto';
@@ -65,7 +65,7 @@ const students = Array.from({ length: N }, (_, i) => ({
 
 let failures = 0;
 const check = (label, ok, detail = '') => {
-  console.log(`${ok ? '  ✅' : '  ❌'} ${label}${detail ? ` — ${detail}` : ''}`);
+  console.log(`${ok ? '  ✅' : '  ❌'} ${label}${detail ? `, ${detail}` : ''}`);
   if (!ok) failures++;
 };
 
@@ -75,7 +75,7 @@ async function cleanup() {
 }
 
 try {
-  console.log(`Target project ${PROJECT_ID} — checking it has all 10 seats free…`);
+  console.log(`Target project ${PROJECT_ID}, checking it has all 10 seats free…`);
   const pre = await rest(`seat_counts?project_id=eq.${PROJECT_ID}&select=booked`, { key: SERVICE });
   const preBooked = pre.json?.[0]?.booked ?? 0;
   if (preBooked !== 0) {

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Humble Coders brand tokens (CLAUDE.md) — the ONLY place hex colors may appear. */
+/* Humble Coders brand tokens (CLAUDE.md), the ONLY place hex colors may appear. */
 @theme {
   --color-bg: #07090f;
   --color-card: #0f131c;

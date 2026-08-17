@@ -1,16 +1,16 @@
 ## 📖 Story / Why
 
-Students book 1 of 25 Android project ideas, max 10 seats each, one booking per student, **no auth** — identity comes from a personal booking code each student receives by email. Every rule must be enforced by the database itself, race-condition safe, and seat counts must stream to open browsers in **realtime**. This ticket stands up that enforcement layer: schema, the two public SQL functions, and the realtime seat feed. Everything else builds on this.
+Students book 1 of 25 Android project ideas, max 10 seats each, one booking per student, **no auth**, identity comes from a personal booking code each student receives by email. Every rule must be enforced by the database itself, race-condition safe, and seat counts must stream to open browsers in **realtime**. This ticket stands up that enforcement layer: schema, the two public SQL functions, and the realtime seat feed. Everything else builds on this.
 
 ## 🧭 Context
 
-- Spec: `docs/PRD.md` (v2) §4 — data model, booking codes, security model, race guarantee. Binding.
+- Spec: `docs/PRD.md` (v2) §4, data model, booking codes, security model, race guarantee. Binding.
 - A **v1** reference exists at `project-booking/supabase/schema.sql` (email+OTP era). Reuse what holds (projects seed, RLS approach, race-safe `book_project` skeleton) but implement the **v2 model**: codes live on `students` (`code_hash` unique, `code_sent_at`, `resend_email_id`, `delivery_status`), the `otps` table is gone, and a trigger-maintained `seat_counts` table powers Supabase Realtime.
 - Rules in `CLAUDE.md` apply: RLS zero-policies (single exception: anon SELECT on `seat_counts`), fixed error contract, hashed codes only.
 
 ## 🔑 Access & prerequisites
 
-- Supabase account access for the Humble-Coders org project (or a personal access token + project ref) — from the manager via a secure channel. **Never commit tokens.**
+- Supabase account access for the Humble-Coders org project (or a personal access token + project ref), from the manager via a secure channel. **Never commit tokens.**
 - Supabase CLI installed locally (`brew install supabase/tap/supabase`).
 
 ## ✅ Scope / What to build
@@ -38,7 +38,7 @@ Students book 1 of 25 Android project ideas, max 10 seats each, one booking per 
 
 ## 🔗 Dependencies
 
-- None — this is the foundation ticket.
+- None, this is the foundation ticket.
 
 ## 📚 References
 

@@ -57,10 +57,10 @@ export function Admin() {
     const failed = res.data?.failed ?? []
     if (res.ok) return [`Code sent to ${whoLabel}.`, 'ok']
     if (res.error === 'not_found') return [`${whoLabel} isn't in the student list.`, 'bad']
-    if (res.error === 'unauthorized') return ['Secret rejected — please unlock again.', 'bad']
+    if (res.error === 'unauthorized') return ['Secret rejected. Please unlock again.', 'bad']
     const quota = res.data?.quota_exceeded_likely === true
     const base = `Sent ${sent}, failed ${failed.length}${failed.length > 0 ? `: ${failed.map((f) => f.email).join(', ')}` : ''}.`
-    return [quota ? `${base} This looks like the Resend daily cap — try the rest tomorrow.` : base, 'bad']
+    return [quota ? `${base} This looks like the Resend daily cap. Try the rest tomorrow.` : base, 'bad']
   }
 
   const runSendOne = async (email: string) => {
@@ -94,11 +94,11 @@ export function Admin() {
       const changed = res.data.changes.length
       push(
         changed === 0
-          ? `Checked ${res.data.checked} tracked email(s) — no changes yet.`
+          ? `Checked ${res.data.checked} tracked email(s), no changes yet.`
           : `Updated ${changed} student(s): ${res.data.changes.map((c) => `${c.email} → ${c.delivery_status}`).join(', ')}`,
       )
     } else {
-      push("Couldn't refresh delivery statuses — try again in a moment.", 'bad')
+      push("Couldn't refresh delivery statuses. Try again in a moment.", 'bad')
     }
     setBusy(null)
     await reload()
@@ -110,12 +110,12 @@ export function Admin() {
     const res = await syncSheet(secret)
     if (res.ok) {
       push(
-        `Sheet synced — ${res.data.emails_in_sheet} email(s) in the sheet, ${res.data.total_registered} student(s) registered.`,
+        `Sheet synced, ${res.data.emails_in_sheet} email(s) in the sheet, ${res.data.total_registered} student(s) registered.`,
       )
     } else if (res.error === 'not_configured') {
-      push('No sheet URL configured yet — set SHEET_CSV_URL in the Supabase secrets.', 'bad')
+      push('No sheet URL configured yet. Set SHEET_CSV_URL in the Supabase secrets.', 'bad')
     } else {
-      push("Couldn't read the sheet — check that it's still published to the web.", 'bad')
+      push("Couldn't read the sheet. Check that it's still published to the web.", 'bad')
     }
     setBusy(null)
     await reload()
@@ -131,7 +131,7 @@ export function Admin() {
 
         {overview === null ? (
           <p className="py-16 text-center text-sm text-muted-text">
-            {loading ? 'Loading…' : "Couldn't load the dashboard — try refreshing."}
+            {loading ? 'Loading…' : "Couldn't load the dashboard. Try refreshing."}
           </p>
         ) : (
           <>

@@ -4,8 +4,7 @@ import { supabase } from '../lib/supabase'
 import type { Project, SeatCountRow, SeatFeedMode } from '../lib/types'
 
 // Polling cadence (PRD §6): lazy safety net while realtime is healthy; tight
-// with jitter when it isn't (free plan caps realtime at 200 connections —
-// rejected clients must degrade silently, not stampede in sync).
+// with jitter when it isn't (free plan caps realtime at 200 connections, // rejected clients must degrade silently, not stampede in sync).
 const POLL_REALTIME_OK_MS = 45_000
 const POLL_FALLBACK_MS = 15_000
 const FALLBACK_JITTER_MS = 6_000
@@ -92,7 +91,7 @@ export function useProjects(): ProjectsState {
           },
         )
         .subscribe((status) => {
-          // A replaced channel fires CLOSED on removal — only the current
+          // A replaced channel fires CLOSED on removal, only the current
           // channel may drive mode changes and rejoin scheduling.
           if (disposed || channelRef.current !== channel) return
           if (status === 'SUBSCRIBED') {
@@ -102,7 +101,7 @@ export function useProjects(): ProjectsState {
             void fetchProjects()
             schedulePoll()
           } else {
-            // CHANNEL_ERROR, TIMED_OUT, CLOSED, too_many_connections — all the
+            // CHANNEL_ERROR, TIMED_OUT, CLOSED, too_many_connections, all the
             // same story: tighten polling, quietly retry the join later.
             setMode('polling')
             schedulePoll()

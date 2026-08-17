@@ -1,5 +1,4 @@
-// Cosmetic "you've booked X" note. localStorage is convenience only —
-// the database is the sole truth (PRD §5.2). Guarded: storage can throw
+// Cosmetic "you've booked X" note. localStorage is convenience only, // the database is the sole truth (PRD §5.2). Guarded: storage can throw
 // (private mode, disabled cookies), and the banner is never worth crashing for.
 
 const KEY = 'hc-my-booking'
@@ -16,6 +15,6 @@ export function setMyBooking(project: string): void {
   try {
     localStorage.setItem(KEY, project)
   } catch {
-    // storage unavailable — banner just won't persist
+    // storage unavailable, banner just won't persist
   }
 }

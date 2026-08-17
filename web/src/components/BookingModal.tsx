@@ -58,7 +58,7 @@ export function BookingModal({ project, onClose, onOutcome }: Props) {
             </p>
             <h2 className="mb-1 text-[21px] font-bold tracking-tight">{project.title}</h2>
             <p className="mb-5 text-sm leading-relaxed text-muted-text">
-              Enter the personal booking code from your email. That code is your identity — no
+              Enter the personal booking code from your email. That code is your identity. No
               sign-in needed.
             </p>
             <input
@@ -113,7 +113,7 @@ function ResultView({
         <div className="mx-auto mb-4.5 flex h-[62px] w-[62px] items-center justify-center rounded-full border-[1.5px] border-ok/40 bg-ok/12 text-[28px] text-ok">
           ✓
         </div>
-        <h2 className="mb-1 text-[21px] font-bold tracking-tight">Seat booked — it's yours!</h2>
+        <h2 className="mb-1 text-[21px] font-bold tracking-tight">Seat booked. It's yours!</h2>
         <p className="mb-5 text-sm leading-relaxed text-muted-text">
           Booked as <b className="text-text">{result.email}</b>
           <br />
@@ -129,31 +129,31 @@ function ResultView({
       icon: '✕',
       tone: 'bad',
       title: "That code didn't match",
-      body: 'Check the code from your email — and if you were sent a new one, only the newest email counts. Your instructor can resend it anytime.',
+      body: 'Check the code from your email. If you were sent a new one, only the newest email counts. Your instructor can resend it anytime.',
     },
     already_booked: {
       icon: '✓',
       tone: 'ok',
       title: 'You already have a seat',
-      body: `This code has already booked ${result.project ? `“${result.project}”` : 'a project'}. One booking per student — you're all set.`,
+      body: `This code has already booked ${result.project ? `“${result.project}”` : 'a project'}. One booking per student, so you're all set.`,
     },
     full: {
       icon: '✕',
       tone: 'bad',
       title: 'That seat just went',
-      body: `Someone grabbed the last seat on “${project.title}” a moment ago. The counts are refreshed — pick another project you like.`,
+      body: `Someone grabbed the last seat on “${project.title}” a moment ago. The counts are refreshed. Pick another project you like.`,
     },
     no_project: {
       icon: '✕',
       tone: 'bad',
       title: "That project doesn't exist",
-      body: 'Refresh the page and try again — the list may have changed.',
+      body: 'Refresh the page and try again. The list may have changed.',
     },
     network: {
       icon: '✕',
       tone: 'bad',
       title: "Couldn't reach the server",
-      body: 'Check your connection and try again — nothing was booked.',
+      body: 'Check your connection and try again. Nothing was booked.',
     },
   }[result.error]
 

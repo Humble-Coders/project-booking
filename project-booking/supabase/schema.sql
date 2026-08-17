@@ -1,5 +1,5 @@
 -- ============================================================
--- Humble Coders — Project Booking (schema v2: code-based booking)
+-- Humble Coders, Project Booking (schema v2: code-based booking)
 -- Run this whole file once in the Supabase SQL Editor.
 -- Idempotent: safe to re-run.
 --
@@ -135,8 +135,8 @@ $$;
 -- ---------- Atomic booking: code identifies the student, race-safe ----------
 -- The code alone is the student's identity (PRD decision #2). Concurrency:
 -- "for update" on the project row serializes all bookings for that project,
--- so the seat-count check is exact — first 10 win, the rest get 'full'.
--- Error contract (fixed — see CLAUDE.md):
+-- so the seat-count check is exact, first 10 win, the rest get 'full'.
+-- Error contract (fixed, see CLAUDE.md):
 --   invalid_code | already_booked (+project) | no_project | full
 --   success: ok + email + project
 
@@ -224,10 +224,10 @@ insert into public.projects (id, title, description, api_name, api_url, api_note
 (19, 'Daily Quotes',           'Random inspirational quote with a share button.', 'ZenQuotes', 'https://zenquotes.io', 'No key needed'),
 (20, 'Advice Generator',       'Tap a card to get a random piece of advice.', 'Advice Slip', 'https://api.adviceslip.com', 'No key needed'),
 (21, 'Dog Breed Gallery',      'Pick a dog breed and see random photos of it.', 'Dog CEO', 'https://dog.ceo/dog-api', 'No key needed'),
-(22, 'Cat Facts & Pics',       'Random cat image paired with a random cat fact — two APIs in one app.', 'TheCatAPI + catfact.ninja', 'https://thecatapi.com', 'Free API key'),
+(22, 'Cat Facts & Pics',       'Random cat image paired with a random cat fact, two APIs in one app.', 'TheCatAPI + catfact.ninja', 'https://thecatapi.com', 'Free API key'),
 (23, 'Public Holiday Calendar','Pick a country and year, list all public holidays.', 'Nager.Date', 'https://date.nager.at/Api', 'No key needed'),
 (24, 'University Finder',      'Search universities by country and open their websites.', 'Hipolabs Universities', 'http://universities.hipolabs.com', 'No key needed'),
-(25, 'Name Predictor',         'Enter a name and predict age, gender and nationality — three parallel Retrofit calls.', 'Agify + Genderize + Nationalize', 'https://agify.io', 'No key needed')
+(25, 'Name Predictor',         'Enter a name and predict age, gender and nationality, three parallel Retrofit calls.', 'Agify + Genderize + Nationalize', 'https://agify.io', 'No key needed')
 on conflict (id) do update set
   title = excluded.title,
   description = excluded.description,
