@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/* Humble Coders brand tokens (CLAUDE.md) — the ONLY place hex colors may appear. */
+@theme {
+  --color-bg: #07090f;
+  --color-card: #0f131c;
+  --color-secondary: #161b27;
+  --color-muted: #1a2030;
+  --color-text: #f4f6fb;
+  --color-muted-text: #94a0b8;
+  --color-brand: #4263a6;
+  --color-brand2: #5b7cc4;
+  --color-line: #5b7cc424;
+  --color-field: #5b7cc414;
+  --color-gold: #f5c451;
+  --color-ok: #34d399;
+  --color-bad: #f87171;
+  --color-amber: #fbbf24;
+  --color-amber-deep: #f59e0b;
+  --color-amber-dark: #b45309;
+
+  --radius-card: 0.875rem;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-script: "Caveat", cursive;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
