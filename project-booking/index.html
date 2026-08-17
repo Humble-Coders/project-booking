@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Project Booking — Humble Coders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Caveat:wght@600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --background: #07090f;
+    --card: #0f131c;
+    --secondary: #161b27;
+    --muted: #1a2030;
+    --foreground: #f4f6fb;
+    --muted-foreground: #94a0b8;
+    --brand: #4263a6;
+    --brand-2: #5b7cc4;
+    --border: #5b7cc424;
+    --input: #5b7cc414;
+    --gold: #f5c451;
+    --green: #34d399;
+    --red: #f87171;
+    --radius: 0.875rem;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+  a { color: var(--brand-2); }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    background: rgba(7, 9, 15, 0.75);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-inner {
+    max-width: 1200px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { display: flex; flex-direction: column; line-height: 1; text-decoration: none; }
+  .logo .script { font-family: "Caveat", cursive; font-size: 20px; color: var(--gold); transform: rotate(-4deg); margin-left: 4px; }
+  .logo .block { font-weight: 800; font-size: 18px; letter-spacing: 2px; color: #fff; }
+  .header-pill {
+    font-size: 13px; font-weight: 600; color: var(--muted-foreground);
+    border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px;
+    background: var(--input);
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative; overflow: hidden;
+    padding: 72px 20px 48px; text-align: center;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 60% 55% at 50% 0%, #4263a63d, transparent 70%);
+  }
+  .hero h1 {
+    position: relative; font-size: clamp(30px, 5.5vw, 52px); font-weight: 800;
+    letter-spacing: -0.02em; max-width: 800px; margin: 0 auto 16px;
+  }
+  .hero h1 .accent { color: var(--brand-2); }
+  .hero p.sub {
+    position: relative; color: var(--muted-foreground); font-size: clamp(15px, 2vw, 17px);
+    max-width: 620px; margin: 0 auto 28px; line-height: 1.6;
+  }
+  .hero-stats {
+    position: relative; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  }
+  .stat {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+    padding: 8px 18px; font-size: 13.5px; font-weight: 600; color: var(--muted-foreground);
+  }
+  .stat b { color: var(--foreground); }
+  .stat .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand-2); }
+
+  /* ---------- My booking banner ---------- */
+  .my-booking {
+    max-width: 1200px; margin: 0 auto 8px; padding: 0 20px; display: none;
+  }
+  .my-booking .inner {
+    background: linear-gradient(90deg, #4263a629, #4263a614);
+    border: 1px solid #4263a655; border-radius: var(--radius);
+    padding: 14px 18px; font-size: 14.5px; display: flex; align-items: center; gap: 10px;
+  }
+
+  /* ---------- Grid ---------- */
+  .grid-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 20px 90px; }
+  .grid {
+    display: grid; gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; display: flex; flex-direction: column; gap: 12px;
+    transition: transform 0.18s ease, border-color 0.18s ease;
+  }
+  .card:hover { transform: translateY(-3px); border-color: #5b7cc45c; }
+  .card.full { opacity: 0.55; }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .proj-num {
+    font-size: 12px; font-weight: 700; color: var(--brand-2);
+    background: #4263a622; border: 1px solid #4263a648;
+    border-radius: 8px; padding: 3px 9px; white-space: nowrap;
+  }
+  .badge {
+    font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 4px 11px; white-space: nowrap;
+  }
+  .badge.nokey  { color: var(--green); background: #34d39918; border: 1px solid #34d39938; }
+  .badge.key    { color: var(--gold);  background: #f5c45118; border: 1px solid #f5c45138; }
+  .card h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .card p.desc { color: var(--muted-foreground); font-size: 14px; line-height: 1.55; flex: 1; }
+  .api-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; text-decoration: none; width: fit-content;
+  }
+  .api-link:hover { text-decoration: underline; }
+  .seats { display: flex; align-items: center; gap: 10px; }
+  .seat-bar { flex: 1; height: 6px; background: var(--muted); border-radius: 999px; overflow: hidden; }
+  .seat-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width 0.4s ease; }
+  .seat-fill.low { background: linear-gradient(90deg, #b45309, #f59e0b); }
+  .seat-text { font-size: 12.5px; font-weight: 600; color: var(--muted-foreground); white-space: nowrap; }
+  .seat-text.low { color: #fbbf24; }
+  .seat-text.none { color: var(--red); }
+  .book-btn {
+    margin-top: 2px; width: 100%; padding: 11px 0; border: none; border-radius: 10px;
+    background: var(--brand); color: #fff; font-family: inherit; font-size: 14.5px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s ease;
+  }
+  .book-btn:hover:not(:disabled) { background: var(--brand-2); }
+  .book-btn:disabled { background: var(--muted); color: var(--muted-foreground); cursor: not-allowed; }
+
+  .loading-state, .error-state {
+    text-align: center; color: var(--muted-foreground); padding: 70px 20px; font-size: 15px;
+  }
+  .spinner {
+    width: 26px; height: 26px; margin: 0 auto 14px; border-radius: 50%;
+    border: 3px solid var(--muted); border-top-color: var(--brand-2);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Modal ---------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 100; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+    background: rgba(3, 4, 8, 0.72); backdrop-filter: blur(6px);
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    width: 100%; max-width: 430px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 18px; padding: 28px;
+    animation: pop 0.22s ease;
+  }
+  @keyframes pop { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal .m-label { font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brand-2); margin-bottom: 6px; }
+  .modal h2 { font-size: 21px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.01em; }
+  .modal .m-sub { color: var(--muted-foreground); font-size: 14px; line-height: 1.55; margin-bottom: 20px; }
+  .modal input {
+    width: 100%; padding: 13px 15px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--input); color: var(--foreground);
+    font-family: inherit; font-size: 15px; outline: none; transition: border-color 0.15s;
+  }
+  .modal input:focus { border-color: var(--brand); }
+  .modal input.code { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 12px; }
+  .m-error { display: none; color: var(--red); font-size: 13.5px; line-height: 1.5; margin-top: 10px; }
+  .m-error.show { display: block; }
+  .m-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn {
+    flex: 1; padding: 12px 0; border-radius: 10px; border: none; cursor: pointer;
+    font-family: inherit; font-size: 14.5px; font-weight: 600; transition: background 0.15s, opacity 0.15s;
+  }
+  .btn.primary { background: var(--brand); color: #fff; }
+  .btn.primary:hover:not(:disabled) { background: var(--brand-2); }
+  .btn.ghost { background: transparent; color: var(--muted-foreground); border: 1px solid var(--border); }
+  .btn.ghost:hover { color: var(--foreground); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .resend { text-align: center; margin-top: 16px; font-size: 13px; color: var(--muted-foreground); }
+  .resend button {
+    background: none; border: none; color: var(--brand-2); font-family: inherit;
+    font-size: 13px; font-weight: 600; cursor: pointer; padding: 0;
+  }
+  .resend button:disabled { color: var(--muted-foreground); cursor: default; }
+  .success-icon {
+    width: 62px; height: 62px; margin: 4px auto 18px; border-radius: 50%;
+    background: #34d39920; border: 1.5px solid #34d39950;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: var(--green);
+  }
+  .m-center { text-align: center; }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 26px 20px; text-align: center;
+    color: var(--muted-foreground); font-size: 13px;
+  }
+  footer .script { font-family: "Caveat", cursive; color: var(--gold); font-size: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a class="logo" href="https://humblecoders.in">
+      <span class="script">Humble</span>
+      <span class="block">CODERS</span>
+    </a>
+    <span class="header-pill">Project Booking</span>
+  </div>
+</header>
+
+<section class="hero">
+  <h1>Pick Your <span class="accent">API Project</span></h1>
+  <p class="sub">
+    25 beginner-friendly Android projects, each built around a free public API with Retrofit.
+    Choose one, verify with the code sent to your registered email, and it's yours.
+  </p>
+  <div class="hero-stats">
+    <span class="stat"><span class="dot"></span><b>25</b>&nbsp;projects</span>
+    <span class="stat"><span class="dot"></span><b>10</b>&nbsp;seats each</span>
+    <span class="stat"><span class="dot"></span><b>1</b>&nbsp;booking per student</span>
+  </div>
+</section>
+
+<div class="my-booking" id="myBooking">
+  <div class="inner">✅&nbsp; You've booked <b id="myBookingTitle"></b>. Happy building!</div>
+</div>
+
+<main class="grid-wrap">
+  <div id="listArea">
+    <div class="loading-state"><div class="spinner"></div>Loading projects…</div>
+  </div>
+</main>
+
+<footer>
+  Built with <span class="script">care</span> by Humble Coders · <a href="https://humblecoders.in">humblecoders.in</a>
+</footer>
+
+<!-- ---------- Booking modal ---------- -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+
+    <div id="stepEmail">
+      <div class="m-label">Step 1 of 2</div>
+      <h2 id="mTitleEmail"></h2>
+      <p class="m-sub">Enter your registered email. We'll send you a 6-digit verification code.</p>
+      <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email" />
+      <div class="m-error" id="emailError"></div>
+      <div class="m-actions">
+        <button class="btn ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn primary" id="sendBtn" onclick="sendCode()">Send Code</button>
+      </div>
+    </div>
+
+    <div id="stepCode" style="display:none">
+      <div class="m-label">Step 2 of 2</div>
+      <h2>Check your inbox</h2>
+      <p class="m-sub">We sent a 6-digit code to <b id="sentTo"></b>. Enter it below to confirm your booking. It expires in 10 minutes.</p>
+      <input type="text" inputmode="numeric" maxlength="6" class="code" id="codeInput" placeholder="••••••" />
+      <div class="m-error" id="codeError"></div>
+      <div class="m-actions">
+        <button class="btn ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn primary" id="bookBtn" onclick="confirmBooking()">Confirm Booking</button>
+      </div>
+      <div class="resend">Didn't get it? <button id="resendBtn" onclick="resendCode()">Resend code</button></div>
+    </div>
+
+    <div id="stepDone" style="display:none" class="m-center">
+      <div class="success-icon">✓</div>
+      <h2 id="doneTitle">Project booked!</h2>
+      <p class="m-sub" id="doneSub"></p>
+      <div class="m-actions">
+        <button class="btn primary" onclick="closeModal()">Done</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ================= CONFIG — fill these two in ================= */
+const SUPABASE_URL      = "https://YOUR-PROJECT-REF.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+/* ============================================================== */
+
+const REST_HEADERS = {
+  "Content-Type": "application/json",
+  "apikey": SUPABASE_ANON_KEY,
+  "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+};
+
+let projects = [];
+let selected = null;      // project being booked
+let verifiedEmail = "";
+let resendTimer = null;
+
+const $ = (id) => document.getElementById(id);
+
+/* ---------- Load & render projects ---------- */
+async function loadProjects(silent = false) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_projects`, {
+      method: "POST", headers: REST_HEADERS, body: "{}",
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    projects = await res.json();
+    renderGrid();
+  } catch (e) {
+    if (!silent) {
+      $("listArea").innerHTML =
+        '<div class="error-state">Couldn\'t load projects. Check your connection and refresh.</div>';
+    }
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function renderGrid() {
+  const grid = document.createElement("div");
+  grid.className = "grid";
+  grid.innerHTML = projects.map((p) => {
+    const left = p.seats_left;
+    const pct = ((p.capacity - left) / p.capacity) * 100;
+    const isFull = left <= 0;
+    const isLow = !isFull && left <= 3;
+    const noKey = /no key/i.test(p.api_note);
+    return `
+    <div class="card${isFull ? " full" : ""}">
+      <div class="card-top">
+        <span class="proj-num">Project ${String(p.id).padStart(2, "0")}</span>
+        <span class="badge ${noKey ? "nokey" : "key"}">${escapeHtml(p.api_note)}</span>
+      </div>
+      <h3>${escapeHtml(p.title)}</h3>
+      <p class="desc">${escapeHtml(p.description)}</p>
+      <a class="api-link" href="${escapeHtml(p.api_url)}" target="_blank" rel="noopener">
+        🔗 ${escapeHtml(p.api_name)}
+      </a>
+      <div class="seats">
+        <div class="seat-bar"><div class="seat-fill${isLow ? " low" : ""}" style="width:${pct}%"></div></div>
+        <span class="seat-text${isFull ? " none" : isLow ? " low" : ""}">
+          ${isFull ? "Full" : left + " seat" + (left === 1 ? "" : "s") + " left"}
+        </span>
+      </div>
+      <button class="book-btn" ${isFull ? "disabled" : ""} onclick="openModal(${p.id})">
+        ${isFull ? "Fully Booked" : "Book This Project"}
+      </button>
+    </div>`;
+  }).join("");
+  $("listArea").innerHTML = "";
+  $("listArea").appendChild(grid);
+}
+
+/* ---------- Modal flow ---------- */
+function openModal(projectId) {
+  selected = projects.find((p) => p.id === projectId);
+  if (!selected) return;
+  $("mTitleEmail").textContent = "Book: " + selected.title;
+  showStep("stepEmail");
+  $("emailInput").value = localStorage.getItem("hc_email") || "";
+  hideError("emailError"); hideError("codeError");
+  $("codeInput").value = "";
+  $("overlay").classList.add("open");
+  setTimeout(() => $("emailInput").focus(), 60);
+}
+
+function closeModal() {
+  $("overlay").classList.remove("open");
+  clearInterval(resendTimer);
+  loadProjects(true);
+}
+
+function showStep(id) {
+  ["stepEmail", "stepCode", "stepDone"].forEach((s) => ($(s).style.display = s === id ? "block" : "none"));
+}
+function showError(id, msg) { const el = $(id); el.textContent = msg; el.classList.add("show"); }
+function hideError(id) { $(id).classList.remove("show"); }
+
+const SEND_ERRORS = {
+  invalid_email:  "That doesn't look like a valid email address.",
+  not_registered: "This email isn't registered for the course. Please use your registered email, or contact your instructor.",
+  too_soon:       "A code was sent recently — please wait a minute before requesting another.",
+  email_failed:   "We couldn't send the email right now. Please try again in a moment.",
+};
+
+async function sendCode() {
+  const email = $("emailInput").value.trim().toLowerCase();
+  hideError("emailError");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showError("emailError", SEND_ERRORS.invalid_email);
+    return;
+  }
+  const btn = $("sendBtn");
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-otp`, {
+      method: "POST", headers: REST_HEADERS, body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      verifiedEmail = email;
+      localStorage.setItem("hc_email", email);
+      $("sentTo").textContent = email;
+      showStep("stepCode");
+      startResendCooldown();
+      setTimeout(() => $("codeInput").focus(), 60);
+    } else {
+      showError("emailError", SEND_ERRORS[data.error] || "Something went wrong. Please try again.");
+    }
+  } catch {
+    showError("emailError", "Network error — check your connection and try again.");
+  } finally {
+    btn.disabled = false; btn.textContent = "Send Code";
+  }
+}
+
+function startResendCooldown() {
+  const btn = $("resendBtn");
+  let s = 60;
+  btn.disabled = true;
+  btn.textContent = `Resend in ${s}s`;
+  clearInterval(resendTimer);
+  resendTimer = setInterval(() => {
+    s--;
+    if (s <= 0) { clearInterval(resendTimer); btn.disabled = false; btn.textContent = "Resend code"; }
+    else btn.textContent = `Resend in ${s}s`;
+  }, 1000);
+}
+
+async function resendCode() {
+  hideError("codeError");
+  const btn = $("resendBtn");
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-otp`, {
+      method: "POST", headers: REST_HEADERS, body: JSON.stringify({ email: verifiedEmail }),
+    });
+    const data = await res.json();
+    if (!data.ok) showError("codeError", SEND_ERRORS[data.error] || "Couldn't resend. Try again shortly.");
+  } catch {
+    showError("codeError", "Network error — try again shortly.");
+  }
+  startResendCooldown();
+}
+
+const BOOK_ERRORS = {
+  no_code:           "No active code for this email — go back and request a new one.",
+  expired:           "That code expired. Please request a new one.",
+  too_many_attempts: "Too many wrong attempts. Please request a new code.",
+  no_project:        "This project no longer exists. Refresh the page.",
+  full:              "Sorry — the last seat was just taken. Pick another project!",
+};
+
+async function confirmBooking() {
+  const code = $("codeInput").value.trim();
+  hideError("codeError");
+  if (!/^\d{6}$/.test(code)) {
+    showError("codeError", "Enter the 6-digit code from your email.");
+    return;
+  }
+  const btn = $("bookBtn");
+  btn.disabled = true; btn.textContent = "Booking…";
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/book_project`, {
+      method: "POST", headers: REST_HEADERS,
+      body: JSON.stringify({ p_email: verifiedEmail, p_code: code, p_project_id: selected.id }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      rememberBooking(data.project);
+      $("doneTitle").textContent = "Project booked! 🎉";
+      $("doneSub").innerHTML = `<b>${escapeHtml(data.project)}</b> is officially yours, ${escapeHtml(verifiedEmail)}. Time to start building!`;
+      showStep("stepDone");
+    } else if (data.error === "wrong_code") {
+      showError("codeError", `Wrong code. ${data.attempts_left} attempt${data.attempts_left === 1 ? "" : "s"} left.`);
+    } else if (data.error === "already_booked") {
+      const proj = data.project ? ` You already booked <b>${escapeHtml(data.project)}</b>.` : " You already have a booking.";
+      if (data.project) rememberBooking(data.project);
+      $("doneTitle").textContent = "Already booked";
+      $("doneSub").innerHTML = "One project per student —" + proj;
+      showStep("stepDone");
+    } else {
+      showError("codeError", BOOK_ERRORS[data.error] || "Something went wrong. Please try again.");
+      if (data.error === "full") loadProjects(true);
+    }
+  } catch {
+    showError("codeError", "Network error — check your connection and try again.");
+  } finally {
+    btn.disabled = false; btn.textContent = "Confirm Booking";
+  }
+}
+
+/* ---------- Remembered booking (cosmetic only) ---------- */
+function rememberBooking(title) {
+  localStorage.setItem("hc_booked", title);
+  showMyBooking();
+}
+function showMyBooking() {
+  const t = localStorage.getItem("hc_booked");
+  if (t) {
+    $("myBookingTitle").textContent = t;
+    $("myBooking").style.display = "block";
+  }
+}
+
+/* ---------- Keyboard niceties ---------- */
+$("emailInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendCode(); });
+$("codeInput").addEventListener("keydown", (e) => { if (e.key === "Enter") confirmBooking(); });
+$("codeInput").addEventListener("input", (e) => { e.target.value = e.target.value.replace(/\D/g, ""); });
+$("overlay").addEventListener("click", (e) => { if (e.target === $("overlay")) closeModal(); });
+
+/* ---------- Go ---------- */
+showMyBooking();
+loadProjects();
+setInterval(() => { if (!$("overlay").classList.contains("open")) loadProjects(true); }, 45000);
+</script>
+</body>
+</html>
