@@ -1,4 +1,6 @@
-// sync-students — manually pull the registered-email list from the Google Sheet.
+// sync-students — secret-URL fallback for pulling the registered-email list
+// from the Google Sheet (the dashboard normally does this via the admin
+// function's sync_sheet action; same shared logic).
 // Open in a browser:  https://<project-ref>.supabase.co/functions/v1/sync-students?secret=<SYNC_SECRET>
 //
 // Secrets required:
@@ -6,6 +8,7 @@
 //   SYNC_SECRET   — any long random string, so only you can trigger a sync
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { syncSheet } from "../_shared/sheet.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -18,8 +21,6 @@ const json = (body: unknown, status = 200) =>
     headers: { ...cors, "Content-Type": "application/json" },
   });
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
@@ -28,29 +29,11 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: "unauthorized" }, 401);
   }
 
-  const sheetUrl = Deno.env.get("SHEET_CSV_URL");
-  if (!sheetUrl) return json({ ok: false, error: "SHEET_CSV_URL not set" }, 500);
-
-  const res = await fetch(sheetUrl, { redirect: "follow" });
-  if (!res.ok) return json({ ok: false, error: `sheet fetch failed (${res.status})` }, 502);
-  const csv = await res.text();
-
-  const emails = [...new Set(
-    (csv.match(/[^\s,"';]+@[^\s,"';]+\.[^\s,"';]+/g) ?? [])
-      .map((e) => e.toLowerCase().trim())
-      .filter((e) => EMAIL_RE.test(e)),
-  )];
-
   const db = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const { error } = await db
-    .from("students")
-    .upsert(emails.map((email) => ({ email })), { onConflict: "email", ignoreDuplicates: true });
-  if (error) return json({ ok: false, error: error.message }, 500);
-
-  const { count } = await db.from("students").select("*", { count: "exact", head: true });
-  return json({ ok: true, emails_in_sheet: emails.length, total_registered: count });
+  const result = await syncSheet(db);
+  return json(result, result.ok ? 200 : 502);
 });
