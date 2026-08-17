@@ -92,7 +92,7 @@ const finish = () => {
 
 if (mode === 'auth') {
   console.log('401 checks:');
-  for (const action of ['overview', 'send_code', 'refresh_status', 'sync_sheet']) {
+  for (const action of ['overview', 'send_code', 'refresh_status', 'sync_sheet', 'set_booking_open']) {
     const wrong = await admin({ action }, 'wrong-secret');
     check(`${action} with wrong secret → 401 unauthorized`, wrong.status === 401 && wrong.json?.error === 'unauthorized');
     const missing = await admin({ action }, null);
@@ -102,6 +102,11 @@ if (mode === 'auth') {
   const ov = await admin({ action: 'overview' });
   check('overview returns students/projects/totals', ov.status === 200 && ov.json?.ok && Array.isArray(ov.json.students) && Array.isArray(ov.json.projects) && !!ov.json.totals, `status ${ov.status}`);
   check('overview lists 25 projects', ov.json?.projects?.length === 25);
+  check('overview reports the booking gate', typeof ov.json?.booking_open === 'boolean', `booking_open is ${JSON.stringify(ov.json?.booking_open)}`);
+  console.log(`  booking is currently ${ov.json?.booking_open ? 'OPEN' : 'CLOSED'}`);
+  // Rejected before it writes anything, so this never flips the real gate.
+  const badGate = await admin({ action: 'set_booking_open' });
+  check('set_booking_open without a boolean → 400 bad_request', badGate.status === 400 && badGate.json?.error === 'bad_request', JSON.stringify(badGate.json));
   const sheet = await admin({ action: 'sync_sheet' });
   check('sync_sheet responds per contract (ok, or not_configured/sheet_failed)', sheet.json?.ok === true || ['not_configured', 'sheet_failed'].includes(sheet.json?.error), JSON.stringify(sheet.json));
   const unknown = await admin({ action: 'nonsense' });
@@ -133,6 +138,16 @@ if (mode === 'book') {
   const projectId = Number(arg3 ?? 24);
   if (!email || !code) { console.error('usage: admin-test.mjs book <email> <CODE> [project_id]'); process.exit(1); }
 
+  // This step books a real seat, so it needs the gate open. Refuse rather than
+  // open it, flipping production booking from a test script is not this
+  // script's call to make.
+  const gate = await admin({ action: 'overview' });
+  if (gate.json?.booking_open !== true) {
+    console.error('Booking is CLOSED, so book_project will return not_open.');
+    console.error('Open booking from the dashboard, re-run this step, then close it again.');
+    process.exit(1);
+  }
+
   const booked = await rpcAnon('book_project', { p_code: code, p_project_id: projectId });
   check('emailed code books successfully', booked?.ok === true && booked?.email === email, JSON.stringify(booked));
 
@@ -149,6 +164,14 @@ if (mode === 'verify-new') {
   const email = String(arg1 ?? '').toLowerCase().trim();
   const code = String(arg2 ?? '').trim();
   if (!email || !code) { console.error('usage: admin-test.mjs verify-new <email> <NEW-CODE>'); process.exit(1); }
+
+  // Expects already_booked, which only surfaces past an open gate.
+  const gate = await admin({ action: 'overview' });
+  if (gate.json?.booking_open !== true) {
+    console.error('Booking is CLOSED, so book_project returns not_open before it reads the code.');
+    console.error('Open booking from the dashboard, re-run this step, then close it again.');
+    process.exit(1);
+  }
 
   const attempt = await rpcAnon('book_project', { p_code: code, p_project_id: 1 });
   check('new code identifies the student (already_booked + their project)', attempt?.error === 'already_booked' && !!attempt?.project, JSON.stringify(attempt));

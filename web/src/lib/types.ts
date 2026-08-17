@@ -16,5 +16,11 @@ export interface SeatCountRow {
   booked: number
 }
 
+/** The booking gate, flipped by the instructor. Realtime feed, same as seats. */
+export interface SettingsRow {
+  id: number
+  booking_open: boolean
+}
+
 /** How seat data is currently reaching the client. */
 export type SeatFeedMode = 'realtime' | 'polling'

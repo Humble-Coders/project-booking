@@ -9,6 +9,13 @@
 // invalid_code and no_project. Cleans up all test rows after,
 // pass or fail.
 //
+// The booking gate decides which half runs, and this script
+// NEVER flips it, leaving production booking open because a
+// test run died is not a risk worth taking:
+//   gate CLOSED → verifies the gate blocks bookings, then stops
+//                 and tells you to open it for the race test
+//   gate OPEN   → runs the full race, then reminds you to close
+//
 // Usage:
 //   SUPABASE_URL=https://<ref>.supabase.co \
 //   SUPABASE_ANON_KEY=<anon/publishable key> \
@@ -73,6 +80,32 @@ async function cleanup() {
   await rest(`bookings?email=like.concurrency-test%2B*`, { method: 'DELETE', key: SERVICE });
   await rest(`students?email=like.concurrency-test%2B*`, { method: 'DELETE', key: SERVICE });
 }
+
+// Nothing is seeded yet at this point, so bailing out here needs no cleanup.
+console.log('Reading the booking gate…');
+const gateRow = await rest('settings?id=eq.1&select=booking_open', { key: SERVICE });
+const bookingOpen = gateRow.json?.[0]?.booking_open === true;
+
+if (!bookingOpen) {
+  console.log('\nBooking gate is CLOSED. Checking that it actually blocks:');
+  // book_project checks the gate before it looks a code up, so a garbage code
+  // proves the short-circuit: a closed system says nothing about any code.
+  const blocked = await rpc('book_project', { p_code: 'XXXXXX', p_project_id: PROJECT_ID });
+  check(`closed gate → not_open`, blocked.json?.error === 'not_open', JSON.stringify(blocked.json));
+  check(
+    `closed gate answers before the code is looked up`,
+    blocked.json?.error !== 'invalid_code',
+    `got ${blocked.json?.error}`,
+  );
+  console.log(
+    '\nThe race test needs booking OPEN. Open it from the dashboard, re-run\n' +
+      'this script, then close it again. No test rows were created.',
+  );
+  console.log(failures === 0 ? '\nGATE CHECKS PASSED ✅' : `\n${failures} CHECK(S) FAILED ❌`);
+  process.exit(failures === 0 ? 0 : 1);
+}
+
+console.log('Booking gate is OPEN, running the full race test.');
 
 try {
   console.log(`Target project ${PROJECT_ID}, checking it has all 10 seats free…`);
@@ -155,4 +188,6 @@ try {
 }
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED ✅' : `\n${failures} CHECK(S) FAILED ❌`);
+console.log('\n⚠️  Booking is still OPEN, this script did not touch the gate.');
+console.log('    Close it from the dashboard unless you meant to leave it open.');
 process.exit(failures === 0 ? 0 : 1);

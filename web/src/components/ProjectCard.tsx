@@ -2,15 +2,19 @@ import type { Project } from '../lib/types'
 
 interface Props {
   project: Project
+  /** False until the instructor opens booking; browsing stays fully open. */
+  bookingOpen: boolean
   onBook: (project: Project) => void
 }
 
-export function ProjectCard({ project, onBook }: Props) {
+export function ProjectCard({ project, bookingOpen, onBook }: Props) {
   const { seats_left: seatsLeft, capacity } = project
   const full = seatsLeft <= 0
   const low = !full && seatsLeft <= 3
   const noKey = /no key/i.test(project.api_note)
   const fillPct = capacity > 0 ? ((capacity - seatsLeft) / capacity) * 100 : 100
+  // Full wins over the gate: a booked-out project reads the same either way.
+  const buttonLabel = full ? 'Fully Booked' : bookingOpen ? 'Book This Project' : 'Booking opens soon'
 
   return (
     <article
@@ -65,11 +69,11 @@ export function ProjectCard({ project, onBook }: Props) {
 
       <button
         type="button"
-        disabled={full}
+        disabled={full || !bookingOpen}
         onClick={() => onBook(project)}
         className="mt-0.5 w-full rounded-[10px] bg-brand py-[11px] text-[14.5px] font-semibold text-text transition-colors hover:bg-brand2 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-text"
       >
-        {full ? 'Fully Booked' : 'Book This Project'}
+        {buttonLabel}
       </button>
     </article>
   )

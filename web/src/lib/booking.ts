@@ -10,7 +10,13 @@ export function sanitizeCode(raw: string): string {
 }
 
 /** The fixed book_project error contract (CLAUDE.md) + client-side network. */
-export type BookErrorCode = 'invalid_code' | 'already_booked' | 'full' | 'no_project' | 'network'
+export type BookErrorCode =
+  | 'not_open'
+  | 'invalid_code'
+  | 'already_booked'
+  | 'full'
+  | 'no_project'
+  | 'network'
 
 export type BookResult =
   | { ok: true; email: string; project: string }
@@ -23,7 +29,13 @@ interface RpcBookRow {
   error?: string
 }
 
-const CONTRACT: ReadonlySet<string> = new Set(['invalid_code', 'already_booked', 'full', 'no_project'])
+const CONTRACT: ReadonlySet<string> = new Set([
+  'not_open',
+  'invalid_code',
+  'already_booked',
+  'full',
+  'no_project',
+])
 
 export async function bookProject(code: string, projectId: number): Promise<BookResult> {
   const { data, error } = await supabase.rpc('book_project', {

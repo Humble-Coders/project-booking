@@ -1,12 +1,16 @@
 // admin: the single instructor surface (PRD §5.3–5.4). POST JSON {action, ...},
 // gated by the x-admin-secret header. Actions:
-//   overview       → students + per-project bookings + totals
-//   send_code      → {email} or {all_pending:true}: fresh code, hash overwritten
-//                    (old code dies instantly), emailed via Resend, id tracked
-//   refresh_status → poll Resend per tracked email id → delivered/bounced/failed
-//   sync_sheet     → upsert registered emails from the published Google Sheet CSV
+//   overview          → students + per-project bookings + totals + booking gate
+//   send_code         → {email} or {all_pending:true}: fresh code, hash overwritten
+//                       (old code dies instantly), emailed via Resend, id tracked
+//   refresh_status    → poll Resend per tracked email id → delivered/bounced/failed
+//   sync_sheet        → upsert registered emails from the published Google Sheet CSV
+//   set_booking_open  → {open:boolean}: opens or closes booking for everyone.
+//                       book_project reads the same row, so this is the real gate,
+//                       not a UI state.
 //
-// Error contract: unauthorized | not_found | resend_failed | sheet_failed
+// Error contract: unauthorized | not_found | resend_failed | sheet_failed |
+//                 settings_failed | bad_request
 //                 (+ not_configured when SHEET_CSV_URL is unset)
 //
 // Secrets (supabase secrets set): ADMIN_SECRET, RESEND_API_KEY, FROM_EMAIL,
@@ -130,10 +134,11 @@ Deno.serve(async (req) => {
   );
 
   if (action === "overview") {
-    const [{ data: students }, { data: bookings }, { data: projects }] = await Promise.all([
+    const [{ data: students }, { data: bookings }, { data: projects }, gate] = await Promise.all([
       db.from("students").select("email, code_sent_at, delivery_status").order("email"),
       db.from("bookings").select("email, project_id, booked_at"),
       db.from("projects").select("id, title, capacity").order("id"),
+      db.from("settings").select("booking_open").eq("id", 1).maybeSingle(),
     ]);
     const byEmail = new Map((bookings ?? []).map((b) => [b.email, b.project_id]));
     const titles = new Map((projects ?? []).map((p) => [p.id, p.title]));
@@ -148,6 +153,9 @@ Deno.serve(async (req) => {
     }));
     return json({
       ok: true,
+      // null, not false, when the gate row could not be read: the dashboard must
+      // say "unknown" rather than claim booking is closed when it may be open.
+      booking_open: gate.error || !gate.data ? null : gate.data.booking_open === true,
       students: studentRows,
       projects: projectRows,
       totals: {
@@ -219,6 +227,21 @@ Deno.serve(async (req) => {
   if (action === "sync_sheet") {
     const result = await syncSheet(db);
     return json(result, result.ok ? 200 : 502);
+  }
+
+  // The booking gate. book_project reads this same row on every attempt, so
+  // this is the enforcement point, not a UI hint. Existing bookings are never
+  // touched by closing it.
+  if (action === "set_booking_open") {
+    if (typeof body.open !== "boolean") return json({ ok: false, error: "bad_request" }, 400);
+    const { data, error } = await db
+      .from("settings")
+      .update({ booking_open: body.open, updated_at: new Date().toISOString() })
+      .eq("id", 1)
+      .select("booking_open")
+      .maybeSingle();
+    if (error || !data) return json({ ok: false, error: "settings_failed" }, 502);
+    return json({ ok: true, booking_open: data.booking_open === true });
   }
 
   return json({ ok: false, error: "unknown_action" }, 400);

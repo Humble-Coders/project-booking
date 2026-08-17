@@ -10,7 +10,7 @@ import { Toasts } from '../components/admin/Toasts'
 import { useAdminOverview } from '../hooks/useAdminOverview'
 import { useToast } from '../hooks/useToast'
 import { getAdminSecret, setAdminSecret, clearAdminSecret } from '../lib/adminSecret'
-import { sendCode, sendAllPending, refreshStatuses, syncSheet } from '../lib/admin'
+import { sendCode, sendAllPending, refreshStatuses, syncSheet, setBookingOpen } from '../lib/admin'
 import type { AdminResult, SendResult } from '../lib/admin'
 
 export function Admin() {
@@ -104,6 +104,29 @@ export function Admin() {
     await reload()
   }
 
+  const runSetBookingOpen = async (open: boolean) => {
+    if (mutating) return
+    const warning = open
+      ? 'Open booking now? Every student holding a valid code can book a seat from this moment.'
+      : 'Close booking? Students can still browse, but nobody can book. Bookings already made are kept.'
+    if (!window.confirm(warning)) return
+    setBusy('gate')
+    const res = await setBookingOpen(secret, open)
+    if (res.ok) {
+      push(
+        res.data.booking_open
+          ? 'Booking is now OPEN. Students see it within a second or two, no refresh needed.'
+          : 'Booking is now CLOSED. Existing bookings are untouched.',
+      )
+    } else if (res.error === 'unauthorized') {
+      push('Secret rejected. Please unlock again.', 'bad')
+    } else {
+      push("Couldn't change the booking gate. Nothing was changed, try again.", 'bad')
+    }
+    setBusy(null)
+    await reload()
+  }
+
   const runSyncSheet = async () => {
     if (mutating) return
     setBusy('sync_sheet')
@@ -143,6 +166,7 @@ export function Admin() {
               onSendAllPending={() => void runSendAll()}
               onRefreshStatuses={() => void runRefreshStatuses()}
               onSyncSheet={() => void runSyncSheet()}
+              onSetBookingOpen={(open) => void runSetBookingOpen(open)}
               onReload={() => {
                 setBusy('reload')
                 void reload().finally(() => setBusy(null))
