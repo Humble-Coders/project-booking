@@ -118,13 +118,21 @@ try {
 
   console.log('\nError contract:');
   const winner = students[bodies.findIndex((b) => b?.ok === true)];
-  const again = await rpc('book_project', { p_code: winner.code, p_project_id: PROJECT_ID });
-  check(`second attempt → already_booked + project`, again.json?.error === 'already_booked' && !!again.json?.project, JSON.stringify(again.json));
+  if (winner) {
+    const again = await rpc('book_project', { p_code: winner.code, p_project_id: PROJECT_ID });
+    check(`second attempt → already_booked + project`, again.json?.error === 'already_booked' && !!again.json?.project, JSON.stringify(again.json));
+  } else {
+    check(`second attempt → already_booked + project`, false, 'no successful booking to retry');
+  }
   const garbage = await rpc('book_project', { p_code: 'XXXXXX', p_project_id: PROJECT_ID });
   check(`garbage code → invalid_code`, garbage.json?.error === 'invalid_code', JSON.stringify(garbage.json));
   const loser = students[bodies.findIndex((b) => b?.error === 'full')];
-  const noProj = await rpc('book_project', { p_code: loser.code, p_project_id: 9999 });
-  check(`nonexistent project → no_project`, noProj.json?.error === 'no_project', JSON.stringify(noProj.json));
+  if (loser) {
+    const noProj = await rpc('book_project', { p_code: loser.code, p_project_id: 9999 });
+    check(`nonexistent project → no_project`, noProj.json?.error === 'no_project', JSON.stringify(noProj.json));
+  } else {
+    check(`nonexistent project → no_project`, false, "no 'full' student available to test with");
+  }
 
   console.log('\nRLS lockdown (anon REST):');
   for (const table of ['students', 'bookings', 'projects']) {

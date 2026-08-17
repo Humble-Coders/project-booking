@@ -146,7 +146,8 @@ create or replace function public.book_project(p_code text, p_project_id int)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+-- 'extensions' in the path: Supabase installs pgcrypto (digest) there, not in public
+set search_path = public, extensions
 as $$
 declare
   v_hash     text := encode(digest(upper(trim(p_code)), 'sha256'), 'hex');
