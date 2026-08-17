@@ -1,4 +1,4 @@
-// admin — the single instructor surface (PRD §5.3–5.4). POST JSON {action, ...},
+// admin: the single instructor surface (PRD §5.3–5.4). POST JSON {action, ...},
 // gated by the x-admin-secret header. Actions:
 //   overview       → students + per-project bookings + totals
 //   send_code      → {email} or {all_pending:true}: fresh code, hash overwritten
@@ -11,7 +11,7 @@
 //
 // Secrets (supabase secrets set): ADMIN_SECRET, RESEND_API_KEY, FROM_EMAIL,
 // SHEET_CSV_URL, SYNC_SECRET (used by sync-students, set alongside).
-// Plaintext codes exist ONLY inside the outgoing email — never logged or stored.
+// Plaintext codes exist ONLY inside the outgoing email. It is never logged or stored.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { syncSheet } from "../_shared/sheet.ts";
@@ -47,20 +47,20 @@ const SITE_URL = "https://projects.humblecoders.in";
 function codeEmailHtml(code: string): string {
   return `
   <div style="font-family:Inter,system-ui,sans-serif;max-width:440px;margin:0 auto;padding:32px 24px;background:#07090f;border-radius:14px;color:#f4f6fb">
-    <p style="margin:0 0 4px;font-size:14px;color:#94a0b8">Humble Coders — Project Booking</p>
+    <p style="margin:0 0 4px;font-size:14px;color:#94a0b8">Humble Coders Project Booking</p>
     <h1 style="margin:0 0 16px;font-size:20px;color:#ffffff">Your personal booking code</h1>
     <div style="font-size:36px;letter-spacing:10px;font-weight:800;color:#5b7cc4;padding:16px 0">${code}</div>
     <p style="font-size:14px;color:#f4f6fb;margin:16px 0 0">Pick your project at
       <a href="${SITE_URL}" style="color:#f5c451">${SITE_URL.replace("https://", "")}</a>
       and enter this code to book your seat.</p>
-    <p style="font-size:13px;color:#94a0b8;margin:16px 0 0">Keep it to yourself — this code is your identity. If you lose it, ask your instructor for a new one (the old one stops working).</p>
+    <p style="font-size:13px;color:#94a0b8;margin:16px 0 0">Keep it to yourself. This code is your identity. If you lose it, ask your instructor for a new one (the old one stops working).</p>
   </div>`;
 }
 
 type SendOutcome = { email: string; ok: boolean; error?: string; quota_hint?: boolean };
 
 // Send one code: generate → hash into the row FIRST (old code dies even if the
-// email then fails — instructor just resends) → email → record Resend id.
+// email then fails the instructor just resends) → email → record Resend id.
 async function sendCodeTo(db: ReturnType<typeof createClient>, email: string): Promise<SendOutcome> {
   // Regenerate on the (astronomically rare) unique-hash collision.
   let code = "";

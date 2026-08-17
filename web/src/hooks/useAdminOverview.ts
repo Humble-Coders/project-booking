@@ -7,7 +7,7 @@ const AUTO_REFRESH_MS = 60_000
 interface State {
   overview: Overview | null
   loading: boolean
-  /** True when the server rejected the secret — the page returns to the gate. */
+  /** True when the server rejected the secret, the page returns to the gate. */
   unauthorized: boolean
   reload: () => Promise<void>
 }

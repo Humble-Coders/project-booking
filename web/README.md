@@ -1,9 +1,9 @@
-# web/ — the Project Booking site
+# web/: the Project Booking site
 
 Vite + React 19 + TypeScript (strict) + Tailwind v4. Two routes:
 
-- `/` — public catalogue: 25 projects, live seat counts, booking modal.
-- `/admin` — instructor dashboard (gated by the admin secret, not linked from `/`).
+- `/`: public catalogue, 25 projects, live seat counts, booking modal.
+- `/admin`: instructor dashboard (gated by the admin secret, not linked from `/`).
 
 ## Local development
 
@@ -22,7 +22,7 @@ VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon / publishable key>
 ```
 
-Both are public by design — the database is protected by RLS plus the two-function
+Both are public by design; the database is protected by RLS plus the two-function
 public surface, not by hiding this key. Never put the service-role key, the admin
 secret, or the Resend key in here; they live only in Supabase edge-function secrets.
 
@@ -31,7 +31,7 @@ secret, or the Resend key in here; they live only in Supabase edge-function secr
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev server with hot reload |
-| `npm run build` | Type-check (strict) + production build into `dist/` — this is the CI/deploy command |
+| `npm run build` | Type-check (strict) + production build into `dist/` (the CI/deploy command) |
 | `npm run preview` | Serve the built `dist/` locally, as production would |
 | `npm run lint` | Lint the source |
 
@@ -70,4 +70,4 @@ src/
 ```
 
 Brand tokens (colours, radius, fonts) are defined once in `src/index.css` under `@theme`.
-Components use token classes — no raw hex anywhere else.
+Components use token classes; no raw hex appears anywhere else.

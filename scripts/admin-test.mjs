@@ -45,7 +45,7 @@ if (!URL_ || !ANON || !SERVICE || !ADMIN_SECRET) {
 
 let failures = 0;
 const check = (label, ok, detail = '') => {
-  console.log(`${ok ? '  ✅' : '  ❌'} ${label}${detail ? ` — ${detail}` : ''}`);
+  console.log(`${ok ? '  ✅' : '  ❌'} ${label}${detail ? `, ${detail}` : ''}`);
   if (!ok) failures++;
 };
 
@@ -158,7 +158,7 @@ if (mode === 'verify-new') {
   check('refresh_status runs', refresh.json?.ok === true, JSON.stringify(refresh.json));
   const row = (await rest(`students?email=eq.${encodeURIComponent(email)}&select=delivery_status`)).json?.[0];
   console.log(`  delivery_status for ${email}: ${row?.delivery_status}`);
-  check(`status is 'delivered' (or still 'sent' if Resend hasn't updated yet — rerun in a minute)`, ['delivered', 'sent'].includes(row?.delivery_status), row?.delivery_status);
+  check(`status is 'delivered' (or still 'sent' if Resend hasn't updated yet, rerun in a minute)`, ['delivered', 'sent'].includes(row?.delivery_status), row?.delivery_status);
   finish();
 }
 
@@ -171,5 +171,5 @@ if (mode === 'cleanup') {
   process.exit(0);
 }
 
-console.error('unknown mode — see header for usage');
+console.error('unknown mode, see header for usage');
 process.exit(1);

@@ -8,7 +8,7 @@ interface Props {
 }
 
 function formatSentAt(iso: string | null): string {
-  if (iso === null) return '—'
+  if (iso === null) return '-'
   const d = new Date(iso)
   return `${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
 }
@@ -24,7 +24,7 @@ export function StudentsTable({ students, sendingFor, onSend }: Props) {
 
   return (
     <div className="overflow-hidden rounded-card border border-line bg-card">
-      {/* Header row: desktop only — each card carries its own labels on mobile. */}
+      {/* Header row: desktop only; each card carries its own labels on mobile. */}
       <div className="hidden grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 border-b border-line px-5 py-3 text-[11.5px] font-bold uppercase tracking-wider text-muted-text md:grid">
         <span>Student</span>
         <span>Booked project</span>
@@ -48,7 +48,7 @@ export function StudentsTable({ students, sendingFor, onSend }: Props) {
 
               <span className="text-sm text-muted-text">
                 <span className="md:hidden">Project: </span>
-                {s.project ?? '—'}
+                {s.project ?? '-'}
               </span>
 
               <span className="text-[13px] text-muted-text">

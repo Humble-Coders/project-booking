@@ -15,7 +15,7 @@ export function ErrorState({ onRetry }: ErrorProps) {
   return (
     <div className="px-5 py-[70px] text-center text-[15px] text-muted-text">
       <p className="mb-4">
-        Couldn't load the projects — check your connection and try again.
+        Couldn't load the projects. Check your connection and try again.
       </p>
       <button
         type="button"

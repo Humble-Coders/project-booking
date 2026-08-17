@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Project Booking — Humble Coders</title>
+<title>Project Booking, Humble Coders</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Caveat:wght@600&display=swap" rel="stylesheet" />
@@ -286,7 +286,7 @@
 </div>
 
 <script>
-/* ================= CONFIG — fill these two in ================= */
+/* ================= CONFIG, fill these two in ================= */
 const SUPABASE_URL      = "https://YOUR-PROJECT-REF.supabase.co";
 const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
 /* ============================================================== */
@@ -389,7 +389,7 @@ function hideError(id) { $(id).classList.remove("show"); }
 const SEND_ERRORS = {
   invalid_email:  "That doesn't look like a valid email address.",
   not_registered: "This email isn't registered for the course. Please use your registered email, or contact your instructor.",
-  too_soon:       "A code was sent recently — please wait a minute before requesting another.",
+  too_soon:       "A code was sent recently, please wait a minute before requesting another.",
   email_failed:   "We couldn't send the email right now. Please try again in a moment.",
 };
 
@@ -418,7 +418,7 @@ async function sendCode() {
       showError("emailError", SEND_ERRORS[data.error] || "Something went wrong. Please try again.");
     }
   } catch {
-    showError("emailError", "Network error — check your connection and try again.");
+    showError("emailError", "Network error, check your connection and try again.");
   } finally {
     btn.disabled = false; btn.textContent = "Send Code";
   }
@@ -448,17 +448,17 @@ async function resendCode() {
     const data = await res.json();
     if (!data.ok) showError("codeError", SEND_ERRORS[data.error] || "Couldn't resend. Try again shortly.");
   } catch {
-    showError("codeError", "Network error — try again shortly.");
+    showError("codeError", "Network error, try again shortly.");
   }
   startResendCooldown();
 }
 
 const BOOK_ERRORS = {
-  no_code:           "No active code for this email — go back and request a new one.",
+  no_code:           "No active code for this email, go back and request a new one.",
   expired:           "That code expired. Please request a new one.",
   too_many_attempts: "Too many wrong attempts. Please request a new code.",
   no_project:        "This project no longer exists. Refresh the page.",
-  full:              "Sorry — the last seat was just taken. Pick another project!",
+  full:              "Sorry, the last seat was just taken. Pick another project!",
 };
 
 async function confirmBooking() {
@@ -487,14 +487,14 @@ async function confirmBooking() {
       const proj = data.project ? ` You already booked <b>${escapeHtml(data.project)}</b>.` : " You already have a booking.";
       if (data.project) rememberBooking(data.project);
       $("doneTitle").textContent = "Already booked";
-      $("doneSub").innerHTML = "One project per student —" + proj;
+      $("doneSub").innerHTML = "One project per student," + proj;
       showStep("stepDone");
     } else {
       showError("codeError", BOOK_ERRORS[data.error] || "Something went wrong. Please try again.");
       if (data.error === "full") loadProjects(true);
     }
   } catch {
-    showError("codeError", "Network error — check your connection and try again.");
+    showError("codeError", "Network error, check your connection and try again.");
   } finally {
     btn.disabled = false; btn.textContent = "Confirm Booking";
   }

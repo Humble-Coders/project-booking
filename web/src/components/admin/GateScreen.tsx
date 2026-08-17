@@ -46,7 +46,7 @@ export function GateScreen({ onUnlock }: Props) {
         />
         {locked && (
           <p className="mt-3 text-[13.5px] leading-relaxed text-bad">
-            That secret didn't work — nothing here will load without it. Check the value you were
+            That secret didn't work. Nothing here will load without it. Check the value you were
             given and try again.
           </p>
         )}
