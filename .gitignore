@@ -1,0 +1,16 @@
+# Secrets / local config — never commit
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.idea/
+.DS_Store
+
+# Node / build output
+node_modules/
+dist/
+
+# Supabase CLI local state
+.supabase/
+supabase/.temp/

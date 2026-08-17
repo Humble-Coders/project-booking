@@ -1,6 +1,11 @@
 -- ============================================================
--- Humble Coders — Project Booking
+-- Humble Coders — Project Booking (schema v2: code-based booking)
 -- Run this whole file once in the Supabase SQL Editor.
+-- Idempotent: safe to re-run.
+--
+-- v2 model (PRD §4): codes live on students (hashed, persistent,
+-- replaced on resend), the v1 otps table is gone, and a
+-- trigger-maintained seat_counts table powers Supabase Realtime.
 -- ============================================================
 
 create extension if not exists pgcrypto;
@@ -11,6 +16,19 @@ create table if not exists public.students (
   email      text primary key,
   added_at   timestamptz not null default now()
 );
+
+-- v2 columns: one active code per student, hash only, plus Resend delivery tracking.
+alter table public.students add column if not exists code_hash       text unique;
+alter table public.students add column if not exists code_sent_at    timestamptz;
+alter table public.students add column if not exists resend_email_id text;
+alter table public.students add column if not exists delivery_status text not null default 'none';
+
+do $$ begin
+  alter table public.students
+    add constraint students_delivery_status_check
+    check (delivery_status in ('none','sent','delivered','bounced','failed'));
+exception when duplicate_object then null;
+end $$;
 
 create table if not exists public.projects (
   id          int primary key,
@@ -31,22 +49,66 @@ create table if not exists public.bookings (
 
 create index if not exists bookings_project_idx on public.bookings (project_id);
 
-create table if not exists public.otps (
-  email        text primary key,
-  code_hash    text not null,
-  expires_at   timestamptz not null,
-  attempts     int not null default 0,
-  last_sent_at timestamptz not null default now()
+-- Realtime seat feed: aggregate integers only, maintained by trigger below.
+create table if not exists public.seat_counts (
+  project_id int primary key references public.projects (id),
+  booked     int not null default 0
 );
 
--- ---------- Lock everything down (no direct table access for the web page) ----------
+-- v1 leftover: codes are per-student now, not per-booking.
+drop table if exists public.otps;
 
-alter table public.students enable row level security;
-alter table public.projects enable row level security;
-alter table public.bookings enable row level security;
-alter table public.otps     enable row level security;
--- No policies on purpose: anon/authenticated cannot read or write tables directly.
--- The only doors in are the two functions below.
+-- ---------- seat_counts trigger ----------
+
+create or replace function public.bump_seat_count()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    insert into seat_counts (project_id, booked) values (new.project_id, 1)
+    on conflict (project_id) do update set booked = seat_counts.booked + 1;
+    return new;
+  elsif tg_op = 'DELETE' then
+    update seat_counts set booked = greatest(booked - 1, 0)
+    where project_id = old.project_id;
+    return old;
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists bookings_seat_count on public.bookings;
+create trigger bookings_seat_count
+  after insert or delete on public.bookings
+  for each row execute function public.bump_seat_count();
+
+-- ---------- Lock everything down ----------
+-- RLS on with ZERO policies on students/projects/bookings: the anon key
+-- reads/writes nothing directly. The only doors in are the two functions
+-- below. Single exception: anon may SELECT seat_counts (two integers per
+-- project) to power Realtime.
+
+alter table public.students    enable row level security;
+alter table public.projects    enable row level security;
+alter table public.bookings    enable row level security;
+alter table public.seat_counts enable row level security;
+
+drop policy if exists seat_counts_public_read on public.seat_counts;
+create policy seat_counts_public_read
+  on public.seat_counts for select
+  to anon, authenticated
+  using (true);
+
+-- Realtime: publish seat_counts changes; FULL identity so UPDATE events
+-- carry the row values.
+alter table public.seat_counts replica identity full;
+do $$ begin
+  alter publication supabase_realtime add table public.seat_counts;
+exception when duplicate_object then null;
+end $$;
 
 -- ---------- Public read: project list with live seat counts ----------
 
@@ -64,58 +126,47 @@ as $$
     'api_url',     p.api_url,
     'api_note',    p.api_note,
     'capacity',    p.capacity,
-    'seats_left',  greatest(p.capacity - coalesce(b.cnt, 0), 0)
+    'seats_left',  greatest(p.capacity - coalesce(sc.booked, 0), 0)
   ) order by p.id), '[]'::jsonb)
   from public.projects p
-  left join (
-    select project_id, count(*) as cnt
-    from public.bookings
-    group by project_id
-  ) b on b.project_id = p.id;
+  left join public.seat_counts sc on sc.project_id = p.id;
 $$;
 
--- ---------- Atomic booking: verify OTP + book, race-safe ----------
--- Concurrency: "for update" on the project row serializes all bookings for
--- that project, so the seat count check is exact — first 10 win, rest get 'full'.
+-- ---------- Atomic booking: code identifies the student, race-safe ----------
+-- The code alone is the student's identity (PRD decision #2). Concurrency:
+-- "for update" on the project row serializes all bookings for that project,
+-- so the seat-count check is exact — first 10 win, the rest get 'full'.
+-- Error contract (fixed — see CLAUDE.md):
+--   invalid_code | already_booked (+project) | no_project | full
+--   success: ok + email + project
 
-create or replace function public.book_project(p_email text, p_code text, p_project_id int)
+drop function if exists public.book_project(text, text, int);
+
+create or replace function public.book_project(p_code text, p_project_id int)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+-- 'extensions' in the path: Supabase installs pgcrypto (digest) there, not in public
+set search_path = public, extensions
 as $$
 declare
-  v_email    text := lower(trim(p_email));
-  v_otp      record;
+  v_hash     text := encode(digest(upper(trim(p_code)), 'sha256'), 'hex');
+  v_student  record;
   v_project  record;
   v_taken    int;
   v_existing text;
 begin
-  -- 1. Verify the emailed code
-  select * into v_otp from otps where email = v_email for update;
+  -- 1. The code identifies the student
+  select * into v_student from students where code_hash = v_hash;
   if not found then
-    return jsonb_build_object('ok', false, 'error', 'no_code');
-  end if;
-  if v_otp.expires_at < now() then
-    delete from otps where email = v_email;
-    return jsonb_build_object('ok', false, 'error', 'expired');
-  end if;
-  if v_otp.attempts >= 5 then
-    delete from otps where email = v_email;
-    return jsonb_build_object('ok', false, 'error', 'too_many_attempts');
-  end if;
-  if v_otp.code_hash <> encode(digest(trim(p_code), 'sha256'), 'hex') then
-    update otps set attempts = attempts + 1 where email = v_email;
-    return jsonb_build_object('ok', false, 'error', 'wrong_code',
-                              'attempts_left', 4 - v_otp.attempts);
+    return jsonb_build_object('ok', false, 'error', 'invalid_code');
   end if;
 
   -- 2. One booking per student
   select pr.title into v_existing
   from bookings b join projects pr on pr.id = b.project_id
-  where b.email = v_email;
+  where b.email = v_student.email;
   if found then
-    delete from otps where email = v_email;
     return jsonb_build_object('ok', false, 'error', 'already_booked', 'project', v_existing);
   end if;
 
@@ -127,14 +178,14 @@ begin
 
   select count(*) into v_taken from bookings where project_id = p_project_id;
   if v_taken >= v_project.capacity then
-    delete from otps where email = v_email;
     return jsonb_build_object('ok', false, 'error', 'full');
   end if;
 
   -- 4. Book it
-  insert into bookings (email, project_id) values (v_email, p_project_id);
-  delete from otps where email = v_email;
-  return jsonb_build_object('ok', true, 'project', v_project.title);
+  insert into bookings (email, project_id) values (v_student.email, p_project_id);
+  return jsonb_build_object('ok', true,
+                            'email', v_student.email,
+                            'project', v_project.title);
 
 exception when unique_violation then
   return jsonb_build_object('ok', false, 'error', 'already_booked');
@@ -143,12 +194,12 @@ $$;
 
 -- Only these two functions are callable from the web page.
 revoke execute on function public.get_projects() from public;
-revoke execute on function public.book_project(text, text, int) from public;
+revoke execute on function public.book_project(text, int) from public;
 grant execute on function public.get_projects() to anon, authenticated;
-grant execute on function public.book_project(text, text, int) to anon, authenticated;
+grant execute on function public.book_project(text, int) to anon, authenticated;
 
 -- ============================================================
--- Seed: the 25 projects (capacity 10 each)
+-- Seed: the 25 projects (capacity 10 each) + seat_counts rows
 -- ============================================================
 
 insert into public.projects (id, title, description, api_name, api_url, api_note) values
@@ -183,3 +234,10 @@ on conflict (id) do update set
   api_name = excluded.api_name,
   api_url = excluded.api_url,
   api_note = excluded.api_note;
+
+-- Every project gets a seat_counts row up front so Realtime subscribers
+-- receive UPDATE events from the first booking onward.
+insert into public.seat_counts (project_id, booked)
+select p.id, coalesce((select count(*) from public.bookings b where b.project_id = p.id), 0)
+from public.projects p
+on conflict (project_id) do nothing;
