@@ -10,6 +10,8 @@ Dear Students,
 
 We are pleased to announce that we are opening projects for the Android Application Development program. Each of you will build one Android app that fetches live data from a free public API using Retrofit, and there are 25 projects to choose from.
 
+Please note the timeline clearly: project building starts only after the 20th. Before the 20th, you have to do just two things: book your project and submit the report file with Part A filled. No coding is expected before then.
+
 How booking will work:
 
 1. Every student has to book one project for themselves. Booking is done online, and the link will be shared with you in the morning, when booking starts.
@@ -26,9 +28,11 @@ About the project report:
 
 - The report has to be submitted in the college before the 20th, and must follow the format sent below. It is a fixed 4-page format.
 
-- Only the first 2 pages (Part A: the front page and your project plan) have to be filled before submitting. You can submit the report with only this first part completed.
+- Only the first 2 pages (Part A: the front page and your project plan) have to be filled before submitting. You can and should submit the report with only this first part completed.
 
 - The remaining pages (Part B) are to be filled once your project is done, before the final viva.
+
+To summarise: book your project and submit the Part A report before the 20th, and start building after the 20th.
 
 For any queries, feel free to reach out.
 
