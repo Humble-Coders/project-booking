@@ -1,17 +1,24 @@
+import { useState } from 'react'
 import { Header } from '../components/Header'
 import { Hero } from '../components/Hero'
 import { Footer } from '../components/Footer'
 import { ProjectCard } from '../components/ProjectCard'
+import { BookingModal } from '../components/BookingModal'
+import { MyBookingBanner } from '../components/MyBookingBanner'
 import { LoadingState, ErrorState } from '../components/LoadStates'
 import { useProjects } from '../hooks/useProjects'
+import { getMyBooking } from '../lib/myBooking'
 import type { Project } from '../lib/types'
 
 export function Catalogue() {
-  const { projects, loading, error, retry } = useProjects()
+  const { projects, loading, error, retry, refresh } = useProjects()
+  const [booking, setBooking] = useState<Project | null>(null)
+  const [myBooking, setMyBookingState] = useState<string | null>(() => getMyBooking())
 
-  // Booking modal is ticket #4 — stub keeps the wiring in place.
-  const handleBook = (project: Project) => {
-    console.info(`book stub: project ${project.id} (${project.title})`)
+  const closeModal = () => {
+    setBooking(null)
+    // the modal may have written the note (success or already_booked)
+    setMyBookingState(getMyBooking())
   }
 
   return (
@@ -19,6 +26,7 @@ export function Catalogue() {
       <Header />
       <main className="flex-1">
         <Hero />
+        {myBooking !== null && <MyBookingBanner project={myBooking} />}
         <div className="mx-auto max-w-[1200px] px-5 pb-[90px] pt-6">
           {error ? (
             <ErrorState onRetry={retry} />
@@ -27,13 +35,16 @@ export function Catalogue() {
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-[18px] max-[400px]:grid-cols-1">
               {projects.map((p) => (
-                <ProjectCard key={p.id} project={p} onBook={handleBook} />
+                <ProjectCard key={p.id} project={p} onBook={setBooking} />
               ))}
             </div>
           )}
         </div>
       </main>
       <Footer />
+      {booking !== null && (
+        <BookingModal project={booking} onClose={closeModal} onOutcome={refresh} />
+      )}
     </div>
   )
 }
