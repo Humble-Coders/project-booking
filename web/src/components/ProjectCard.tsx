@@ -38,7 +38,7 @@ export function ProjectCard({ project, onBook }: Props) {
         href={project.api_url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex w-fit items-center gap-1.5 text-[13px] font-semibold text-brand2 hover:underline"
+        className="inline-flex w-fit items-center gap-1.5 py-1 text-[13px] font-semibold text-brand2 hover:underline"
       >
         {project.api_name} ↗
       </a>
