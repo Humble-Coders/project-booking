@@ -13,4 +13,4 @@ dist/
 
 # Supabase CLI local state
 .supabase/
-supabase/.temp/
+**/supabase/.temp/
