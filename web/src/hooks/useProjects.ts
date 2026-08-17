@@ -90,8 +90,11 @@ export function useProjects(): ProjectsState {
           },
         )
         .subscribe((status) => {
-          if (disposed) return
+          // A replaced channel fires CLOSED on removal — only the current
+          // channel may drive mode changes and rejoin scheduling.
+          if (disposed || channelRef.current !== channel) return
           if (status === 'SUBSCRIBED') {
+            if (rejoinTimer.current) clearTimeout(rejoinTimer.current)
             setMode('realtime')
             // Counts may have moved while we were away from the socket.
             void fetchProjects()
