@@ -8,8 +8,11 @@
 
 The app is deployed and running in production on Vercel, wired to the live Supabase project, with SPA fallback so `/admin` works as a typed-in URL. Page metadata is complete: a real favicon and a 1200×630 OG card generated from the humblecoders.in logo, plus OG/Twitter tags and theme colour. The booking-day rehearsal was run against the deployed stack — 15 parallel bookings, exactly 10 winners and 5 clean `full` — and a real code-based booking moved the live seat count from 10 to 9 within two seconds in an open browser. Two accessibility defects found during the audit were fixed and redeployed (logo link name, and 25 API links below the WCAG 2.2 24 px target-size minimum), after which the audit is clean and every sampled contrast ratio passes AA. `project-booking/README.md` is rewritten as the v2 instructor runbook, and `web/README.md` documents local dev — a fresh clone following it produced a working build first try.
 
-**Live now:** https://project-booking-hlanqo9h7-ishanks-projects-c4c57617.vercel.app
-**Custom domain:** attached to the project, **waiting on two DNS records** (below) — the only thing standing between this and `projects.humblecoders.in`.
+**Live:** **https://projects.humblecoders.in** (also reachable at the Vercel URL
+`https://project-booking-hlanqo9h7-ishanks-projects-c4c57617.vercel.app`).
+
+The manager added the DNS records during this ticket; Vercel verified the domain, issued the
+certificate, and both `/` and `/admin` return HTTP/2 200 over HTTPS.
 
 ## Files changed
 
@@ -39,7 +42,7 @@ The app is deployed and running in production on Vercel, wired to the live Supab
 
 ## Acceptance criteria
 
-- ⚠️ **`https://projects.humblecoders.in` loads over HTTPS; `/admin` direct URL works; real booking completes on production** — *partially met.* Everything is verified working on the production deployment (HTTPS, `/admin` deep link returning 200 with app HTML, real booking with code `PRQD8N` → "Pokédex Lite"), but at the Vercel URL: the custom domain needs DNS records only the manager can add (below).
+- ✅ **`https://projects.humblecoders.in` loads over HTTPS; `/admin` direct URL works; real booking completes on production** — the manager added the DNS records mid-ticket; Vercel verified the domain and issued the certificate. Both `/` and `/admin` return HTTP/2 200 with a valid cert and the correct `<title>`/OG tags. The real code-based booking (`PRQD8N` → "Pokédex Lite", live count 10 → 9) was performed on the same production deployment. *Caveat: verified with `curl --resolve` because this dev machine had cached a negative DNS answer from before the record existed; public resolvers (Google) serve it correctly, so student devices are unaffected.*
 - ✅ **Production rehearsal: exactly 10 of 15 succeed; realtime counts observed live** — ran against the deployed stack: 10 ok / 5 `full`, `bookings` = 10, `seat_counts.booked` = 10, plus the full error contract and RLS checks. Separately, a live booking moved Pokédex Lite 10 → 9 in an open browser within 2 s.
 - ✅ **Accessibility ≥ 90 / fast on mobile** — programmatic axe-style audit: zero issues after the two fixes (images have alt, all controls named, inputs labelled, `lang` set, single `h1`, no undersized tap targets). Contrast sampled across six text roles: 4.53–18.41:1, all passing AA. Page load 1.5 s. *Note: this is an equivalent audit run in-browser, not the Lighthouse CLI binary — the numeric Lighthouse score was not produced.*
 - ⚠️ **Instructor completes the runbook loop unaided** — the runbook is written and every step in it has been executed at least once during tickets #2/#4/#6 (sync excepted). The end-to-end unaided run belongs to the manager, and its first step (**sheet sync**) still needs `SHEET_CSV_URL`.
@@ -55,14 +58,11 @@ The app is deployed and running in production on Vercel, wired to the live Supab
 
 ## Open questions / follow-ups
 
-- **DNS — needs the manager.** `humblecoders.in` is at **Namecheap** (Advanced DNS tab). Add, without removing the existing `_vercel` TXT that belongs to the main site:
-
-  | Type | Host | Value |
-  |---|---|---|
-  | CNAME | `projects` | `e270558db9cbb9fc.vercel-dns-017.com.` |
-  | TXT | `_vercel` | `vc-domain-verify=projects.humblecoders.in,1dc76805b7eec9185ca8` |
-
-  HTTPS is issued automatically once both resolve. Note the apex `humblecoders.in` is verified in a *different* Vercel account (the main site), which is why the subdomain needs its own TXT.
+- **DNS — done.** For the record, the two entries now live at **Namecheap** (Advanced DNS) are
+  `CNAME projects → e270558db9cbb9fc.vercel-dns-017.com.` and
+  `TXT _vercel → vc-domain-verify=projects.humblecoders.in,1dc76805b7eec9185ca8`.
+  The apex `humblecoders.in` is verified in a *different* Vercel account (the main site), which is
+  why the subdomain needed its own TXT — the two `_vercel` TXT records coexist and both must stay.
 - **`SHEET_CSV_URL` still unset** — blocks the runbook's first loop and the last criterion of ticket #6.
 - The Lighthouse numeric score was not captured (no CLI binary available here); if the manager wants the official number, running `npx lighthouse <url> --preset=desktop` locally takes a minute.
 - Vercel is not connected to the GitHub repo, so deploys are manual (`npx vercel --prod`). Connecting the repo would give automatic deploys per push — a manager call, documented in the runbook as-is.
