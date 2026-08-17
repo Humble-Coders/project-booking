@@ -14,3 +14,4 @@ dist/
 # Supabase CLI local state
 .supabase/
 **/supabase/.temp/
+.vercel
