@@ -1,5 +1,5 @@
 // The instructor types the admin secret once; it lives only in this browser.
-// It is NEVER bundled (CLAUDE.md) — the edge function is the enforcement layer.
+// It is NEVER bundled (CLAUDE.md), the edge function is the enforcement layer.
 
 const KEY = 'hc-admin-secret'
 
@@ -15,7 +15,7 @@ export function setAdminSecret(secret: string): void {
   try {
     localStorage.setItem(KEY, secret)
   } catch {
-    // storage unavailable — the session just won't persist
+    // storage unavailable, the session just won't persist
   }
 }
 

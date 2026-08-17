@@ -17,7 +17,7 @@ assignees: []
 ## 🔑 Access & prerequisites
 <!-- What the developer must HAVE or OBTAIN before starting, and WHERE to get it
      (server/deploy access, test accounts, API/test config, tools).
-     NEVER put actual secrets here — reference the secure source
+     NEVER put actual secrets here, reference the secure source
      (team password manager / manager via secure channel). -->
 -
 

@@ -9,7 +9,7 @@ const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href], [tabi
  */
 export function useFocusTrap(container: RefObject<HTMLElement | null>, onEscape: () => void) {
   // Held in a ref so a changing callback identity (e.g. a `pending` flip in the
-  // caller) can't re-run the effect — a re-run would capture a modal-internal
+  // caller) can't re-run the effect, a re-run would capture a modal-internal
   // element as "previously focused" and lose the real trigger on close.
   const escapeRef = useRef(onEscape)
   escapeRef.current = onEscape

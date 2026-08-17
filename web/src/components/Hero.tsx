@@ -16,7 +16,7 @@ export function Hero() {
       </h1>
       <p className="relative mx-auto mb-7 max-w-[620px] text-[clamp(15px,2vw,17px)] leading-relaxed text-muted-text">
         25 beginner-friendly Android project ideas, each powered by a free public API.
-        Browse openly — when you're ready, book yours with the personal code from your email.
+        Browse openly. When you're ready, book yours with the personal code from your email.
       </p>
       <div className="relative flex flex-wrap items-center justify-center gap-3">
         {STATS.map(([n, label]) => (

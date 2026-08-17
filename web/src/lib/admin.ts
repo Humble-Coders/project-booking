@@ -51,7 +51,7 @@ export interface SheetResult {
   total_registered: number
 }
 
-/** Every call resolves to one of these — `unauthorized` sends the UI back to the gate. */
+/** Every call resolves to one of these, `unauthorized` sends the UI back to the gate. */
 export type AdminResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: 'unauthorized' | 'not_found' | 'resend_failed' | 'sheet_failed' | 'not_configured' | 'network'; data?: T }
@@ -91,7 +91,7 @@ async function call<T>(secret: string, body: Record<string, unknown>): Promise<A
 
   const known = ['not_found', 'resend_failed', 'sheet_failed', 'not_configured', 'unauthorized'] as const
   const match = known.find((k) => k === json.error)
-  // send_code reports partial success with error: resend_failed — keep the payload.
+  // send_code reports partial success with error: resend_failed, keep the payload.
   return { ok: false, error: match ?? 'network', data: json as unknown as T }
 }
 
