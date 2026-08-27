@@ -40,11 +40,11 @@ export function PdfModal({ project, onClose }: Props) {
       case 'invalid_code':
         return 'That code did not match. Check the code from your email, and remember that only the newest email counts.'
       case 'not_booked':
-        return 'This code has not booked a project yet. Book your seat first, then the brief is yours to download.'
+        return 'This code has not booked a project yet. Book your seat first, then your question bank is yours to download.'
       case 'wrong_project':
-        return `This code booked ${r.project ? `"${r.project}"` : 'a different project'}, so that is the brief you can download.`
+        return `This code booked ${r.project ? `"${r.project}"` : 'a different project'}, so that is the question bank you can download.`
       case 'no_file':
-        return 'The brief for this project is not published yet. Ask your instructor.'
+        return 'The question bank for this project is not published yet. Ask your instructor.'
       default:
         return 'Could not reach the server. Check your connection and try again.'
     }
@@ -60,16 +60,16 @@ export function PdfModal({ project, onClose }: Props) {
         ref={boxRef}
         role="dialog"
         aria-modal="true"
-        aria-label={`Download the brief for ${project.title}`}
+        aria-label={`Download the viva questions for ${project.title}`}
         className="w-full max-w-[430px] rounded-[18px] border border-line bg-card p-7"
         onClick={(e) => e.stopPropagation()}
       >
         <p className="mb-1.5 text-[12.5px] font-bold uppercase tracking-[0.08em] text-brand2">
-          Project brief
+          Viva questions
         </p>
         <h2 className="mb-1 text-[21px] font-bold tracking-tight">{project.title}</h2>
         <p className="mb-5 text-sm leading-relaxed text-muted-text">
-          Enter your booking code. The brief is available to the student who booked this project.
+          Enter your booking code. The viva question bank is available to the student who booked this project.
         </p>
 
         <form onSubmit={(e) => void submit(e)}>
@@ -106,7 +106,7 @@ export function PdfModal({ project, onClose }: Props) {
               disabled={pending || code.length !== CODE_LENGTH}
               className="flex-1 rounded-[10px] bg-brand py-3 text-[14.5px] font-semibold text-text transition-colors hover:bg-brand2 disabled:cursor-not-allowed disabled:opacity-55"
             >
-              {pending ? 'Checking…' : 'Download PDF'}
+              {pending ? 'Checking…' : 'Download viva PDF'}
             </button>
           </div>
         </form>

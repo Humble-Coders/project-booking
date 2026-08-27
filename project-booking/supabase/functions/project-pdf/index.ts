@@ -16,7 +16,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const BUCKET = "project-briefs";
+const BUCKET = "viva-docs";
 const LINK_TTL_SECONDS = 60;
 
 const cors = {

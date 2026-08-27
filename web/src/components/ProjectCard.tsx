@@ -82,14 +82,14 @@ export function ProjectCard({ project, bookingOpen, onBook, onDownloadPdf, isMin
       <button
         type="button"
         onClick={() => onDownloadPdf(project)}
-        aria-label={`Download the project brief for ${project.title}`}
+        aria-label={`Download the viva questions for ${project.title}`}
         className={`w-full rounded-[10px] border py-[9px] text-[13.5px] font-semibold transition-colors ${
           isMine
             ? 'border-brand2/45 bg-brand/15 text-brand2 hover:bg-brand/25'
             : 'border-line bg-secondary text-muted-text hover:border-brand2/35 hover:text-text'
         }`}
       >
-        Download PDF
+        Download viva PDF
       </button>
     </article>
   )
