@@ -5,9 +5,12 @@ interface Props {
   /** False until the instructor opens booking; browsing stays fully open. */
   bookingOpen: boolean
   onBook: (project: Project) => void
+  onDownloadPdf: (project: Project) => void
+  /** Cosmetic hint from localStorage: is this the project the student booked? */
+  isMine?: boolean
 }
 
-export function ProjectCard({ project, bookingOpen, onBook }: Props) {
+export function ProjectCard({ project, bookingOpen, onBook, onDownloadPdf, isMine = false }: Props) {
   const { seats_left: seatsLeft, capacity } = project
   const full = seatsLeft <= 0
   const low = !full && seatsLeft <= 3
@@ -74,6 +77,19 @@ export function ProjectCard({ project, bookingOpen, onBook }: Props) {
         className="mt-0.5 w-full rounded-[10px] bg-brand py-[11px] text-[14.5px] font-semibold text-text transition-colors hover:bg-brand2 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-text"
       >
         {buttonLabel}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onDownloadPdf(project)}
+        aria-label={`Download the project brief for ${project.title}`}
+        className={`w-full rounded-[10px] border py-[9px] text-[13.5px] font-semibold transition-colors ${
+          isMine
+            ? 'border-brand2/45 bg-brand/15 text-brand2 hover:bg-brand/25'
+            : 'border-line bg-secondary text-muted-text hover:border-brand2/35 hover:text-text'
+        }`}
+      >
+        Download PDF
       </button>
     </article>
   )
