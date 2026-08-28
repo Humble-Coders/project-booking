@@ -15,3 +15,6 @@ dist/
 .supabase/
 **/supabase/.temp/
 .vercel
+
+# Generated PDFs: rebuild with scripts/build-viva-pdfs.py
+build/
