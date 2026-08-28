@@ -4,6 +4,7 @@ import { Hero } from '../components/Hero'
 import { Footer } from '../components/Footer'
 import { ProjectCard } from '../components/ProjectCard'
 import { BookingModal } from '../components/BookingModal'
+import { PdfModal } from '../components/PdfModal'
 import { MyBookingBanner } from '../components/MyBookingBanner'
 import { BookingClosedBanner } from '../components/BookingClosedBanner'
 import { LoadingState, ErrorState } from '../components/LoadStates'
@@ -14,6 +15,7 @@ import type { Project } from '../lib/types'
 export function Catalogue() {
   const { projects, loading, error, bookingOpen, retry, refresh } = useProjects()
   const [booking, setBooking] = useState<Project | null>(null)
+  const [pdfFor, setPdfFor] = useState<Project | null>(null)
   const [myBooking, setMyBookingState] = useState<string | null>(() => getMyBooking())
 
   const closeModal = () => {
@@ -44,13 +46,21 @@ export function Catalogue() {
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-[18px] max-[400px]:grid-cols-1">
               {projects.map((p) => (
-                <ProjectCard key={p.id} project={p} bookingOpen={bookingOpen} onBook={setBooking} />
+                <ProjectCard
+                  key={p.id}
+                  project={p}
+                  bookingOpen={bookingOpen}
+                  onBook={setBooking}
+                  onDownloadPdf={setPdfFor}
+                  isMine={myBooking === p.title}
+                />
               ))}
             </div>
           )}
         </div>
       </main>
       <Footer />
+      {pdfFor !== null && <PdfModal project={pdfFor} onClose={() => setPdfFor(null)} />}
       {booking !== null && (
         <BookingModal project={booking} onClose={closeModal} onOutcome={refresh} />
       )}
